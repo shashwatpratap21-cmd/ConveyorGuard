@@ -52,3 +52,4 @@ if uploaded_file is not None:
             st.success(f"✅ **NORMAL**")
             st.write(f"**Confidence:** {confidence:.1f}%")
             st.write("Belt condition healthy. Production can continue.")
+            # Forcing a cache refresh
