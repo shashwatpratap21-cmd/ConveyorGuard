@@ -90,14 +90,16 @@ uploaded_file = st.file_uploader(
 )
 
 if uploaded_file is not None:
+    # Safely convert all images to 3-channel RGB to prevent PNG crashes
     image = Image.open(uploaded_file).convert('RGB')
     st.image(image, caption='Uploaded Belt Photo', use_container_width=True)
     
-  with st.spinner('Analyzing belt condition...'):
+    with st.spinner('Analyzing belt condition...'):
         img = image.resize((224, 224))
         img_array = tf.keras.preprocessing.image.img_to_array(img)
         img_array = tf.expand_dims(img_array, 0)
         
+        # Predict directly on the raw image array
         prediction = model.predict(img_array)[0][0]
         
         st.markdown("---")
