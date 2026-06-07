@@ -174,10 +174,10 @@ with tab1:
 # ✓ Show DGMS compliant actions
 
 ConveyorGuard CANNOT:
-✗ Predict exact time to failure
-✗ Read live sensor data
-✗ Monitor belt continuously
-✗ Replace physical inspection entirely
+# ✗ Predict exact time to failure
+# ✗ Read live sensor data
+# ✗ Monitor belt continuously
+# ✗ Replace physical inspection entirely
 
 Knowing your boundaries = 
 engineering maturity =
