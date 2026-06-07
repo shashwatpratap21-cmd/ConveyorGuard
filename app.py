@@ -4,27 +4,31 @@ import numpy as np
 from PIL import Image
 import os
 
-# --- Keras Version Mismatch Fixes ---
+# --- Keras Version Mismatch Hacks ---
 
-# 1. Fix for the missing math operation
+# 1. INTERCEPTOR FIX: Hide the "127.5" from Keras's strict rules
 @tf.keras.utils.register_keras_serializable()
 class TrueDivide(tf.keras.layers.Layer):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         
-    def call(self, *args, **kwargs):
-        inputs = args[0] if args else []
+    def __call__(self, inputs, *args, **kwargs):
+        # We catch the 127.5 positional argument causing your crash 
+        # and sneakily move it to a keyword argument before Keras panics.
+        if len(args) > 0:
+            kwargs['y'] = args[0]
+            args = tuple(args[1:]) # Clear the strict zone
+        return super().__call__(inputs, *args, **kwargs)
+
+    def call(self, inputs, y=127.5):
         if isinstance(inputs, (list, tuple)) and len(inputs) == 2:
             return inputs[0] / inputs[1]
-        elif len(args) == 2:
-            return args[0] / args[1]
-        return inputs
+        return inputs / y
 
 # 2. Fix for the Colab Dense layer bug
 @tf.keras.utils.register_keras_serializable()
 class SafeDense(tf.keras.layers.Dense):
     def __init__(self, *args, **kwargs):
-        # Strip out the problematic Colab-specific keyword
         kwargs.pop('quantization_config', None)
         super().__init__(*args, **kwargs)
 
@@ -44,7 +48,7 @@ st.write("Upload a photo of the conveyor belt for instant AI analysis.")
 def load_model():
     model_path = os.path.join(os.path.dirname(__file__), 'conveyorguard_model.h5')
     
-    # Load the model using our custom safety filters
+    # Load the model and apply our hacks
     model = tf.keras.models.load_model(
         model_path, 
         compile=False,
