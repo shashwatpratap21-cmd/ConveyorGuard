@@ -174,32 +174,63 @@ with tab1:
 # --- TAB 2: MANUAL OVERRIDE ---
 with tab2:
     st.markdown("### 🎙️ Emergency Manual Reporting")
-    st.write("Use your device's **Microphone (Dictation)** or type a description. Regional languages are supported via dictation.")
+    st.write("Use your device's **Microphone (Dictation)**. Regional languages are supported.")
     
-    # Professionalized the prompt text
-    incident_report = st.text_area("Describe the incident in detail:").upper()
+    # Language Toggle for the output
+    lang = st.radio("Response Language / उत्तर की भाषा:", ["English", "हिंदी"], horizontal=True)
     
-    # Added a dedicated physical submit button (DGMS Red style)
-    if st.button("🚨 Submit Emergency Report", type="primary"):
+    # Explicitly telling users they can use Hinglish
+    st.info("🇮🇳 Supported inputs: English, Hindi, or Hinglish (e.g., 'belt fat gaya', 'aag lag gayi', 'paani aa raha hai')")
+    
+    incident_report = st.text_area("Describe the incident in detail:" if lang == "English" else "घटना का विस्तार से वर्णन करें:").upper()
+    
+    submit_text = "🚨 Submit Emergency Report" if lang == "English" else "🚨 आपातकालीन रिपोर्ट दर्ज करें"
+    
+    if st.button(submit_text, type="primary"):
         if incident_report:
-            # Multilingual Keyword Extraction (Hidden in the backend)
-            if any(word in incident_report for word in ["TEAR", "CUT", "RUPTURE", "BROKEN", "FAT", "PHAT", "TUT", "KATA"]):
-                st.error("🚨 CRITICAL ALERT LOGGED: Belt Tear/Rupture detected.")
-                st.error("**Action:** Stop belt immediately. Dispatch vulcanizing crew.")
-                
-            elif any(word in incident_report for word in ["SPIL", "BLOCK", "OVERFLOW", "JAM", "GIR", "FAS", "PHAS", "RUK"]):
-                st.warning("⚠️ WARNING LOGGED: Material spillage or blockage reported.")
-                st.warning("**Action:** Dispatch cleaning crew to clear idlers and avoid friction fires.")
-                
-            elif any(word in incident_report for word in ["FIRE", "SMOKE", "BURNING", "SPARK", "AAG", "DHUA", "JAL", "DHUAN"]):
-                st.error("🔥 FIRE EMERGENCY LOGGED: Combustion indicators detected.")
-                st.error("**CRITICAL:** Evacuate district. Turn on main suppression systems. Alert DGMS.")
-                
+            # 1. Belt Tear
+            if any(word in incident_report for word in ["TEAR", "CUT", "RUPTURE", "BROKEN", "FAT", "TOOT", "FATA", "TUTA"]):
+                if lang == "English":
+                    st.error("🚨 CRITICAL ALERT LOGGED: Belt Tear/Rupture detected.")
+                    st.error("**Action:** Stop belt immediately. Dispatch vulcanizing crew.")
+                else:
+                    st.error("🚨 गंभीर चेतावनी: बेल्ट फटने की सूचना मिली है।")
+                    st.error("**कार्रवाई (Action):** तुरंत बेल्ट रोकें। मरम्मत टीम (Vulcanizing crew) को भेजें।")
+                    
+            # 2. Fire/Smoke
+            elif any(word in incident_report for word in ["FIRE", "SMOKE", "BURNING", "SPARK", "AAG", "DHUAN", "JALA", "SULAG"]):
+                if lang == "English":
+                    st.error("🔥 FIRE EMERGENCY LOGGED: Combustion indicators detected.")
+                    st.error("**CRITICAL:** Evacuate district. Turn on main suppression systems. Alert DGMS.")
+                else:
+                    st.error("🔥 आग आपातकाल: आग या धुएं की सूचना मिली है।")
+                    st.error("**खतरा (CRITICAL):** तुरंत खदान खाली करें। वाटर स्प्रिंकलर (Water sprinklers) चालू करें। DGMS को अलर्ट करें।")
+                    
+            # 3. Spillage/Blockage
+            elif any(word in incident_report for word in ["SPIL", "BLOCK", "OVERFLOW", "JAM", "GIRA", "BHAR", "RUKA", "BAND"]):
+                if lang == "English":
+                    st.warning("⚠️ WARNING LOGGED: Material spillage or blockage reported.")
+                    st.warning("**Action:** Dispatch cleaning crew to clear idlers and avoid friction fires.")
+                else:
+                    st.warning("⚠️ चेतावनी: कोयला गिरने या बेल्ट जाम होने की सूचना है।")
+                    st.warning("**कार्रवाई (Action):** सफाई टीम को भेजें ताकि घर्षण (friction) से आग न लगे।")
+
+            # 4. Water/Flooding (Your new category!)
+            elif any(word in incident_report for word in ["WATER", "FLOOD", "INUND", "LEAK", "PAANI", "BAARISH", "RISSA"]):
+                if lang == "English":
+                    st.error("🌊 INUNDATION RISK LOGGED: Water flooding reported.")
+                    st.error("**Action:** Evacuate immediately. Activate main water pumps. Alert mine manager.")
+                else:
+                    st.error("🌊 बाढ़ का खतरा: खदान में पानी भरने की सूचना है।")
+                    st.error("**कार्रवाई (Action):** तुरंत बाहर निकलें। मुख्य वाटर पंप चालू करें। खदान प्रबंधक को अलर्ट करें।")
+                    
             else:
-                st.info("📝 General log received. Control room notified for verification.")
-                st.write(f"**Recorded Log:** {incident_report}")
+                if lang == "English":
+                    st.info("📝 General log received. Control room notified for verification.")
+                else:
+                    st.info("📝 रिपोर्ट दर्ज कर ली गई है। वेरिफिकेशन के लिए कंट्रोल रूम को सूचित कर दिया गया है।")
         else:
-            st.warning("Please enter a description before submitting.")
+            st.warning("Please enter a description before submitting." if lang == "English" else "कृपया सबमिट करने से पहले विवरण दर्ज करें।")
 # --- TAB 3: MAINTENANCE SCHEDULER ---
 with tab3:
     st.markdown("### ⚙️ Time-Based Preventive Maintenance")
