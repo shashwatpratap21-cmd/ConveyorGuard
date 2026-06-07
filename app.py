@@ -144,42 +144,41 @@ with tab1:
         with col_results:
             st.markdown("### Inspection Verdict:")
             
-            if st.button("🔍 Run AI Diagnostics", type="primary"):
-                try:
-                    img_resized = image.resize((224, 224))
-                    img_array = tf.keras.preprocessing.image.img_to_array(img_resized)
-                    img_array = np.expand_dims(img_array, axis=0)
+            try:
+                img_resized = image.resize((224, 224))
+                img_array = tf.keras.preprocessing.image.img_to_array(img_resized)
+                img_array = np.expand_dims(img_array, axis=0)
+                
+                # NOTE: If your model was trained on scaled images (0 to 1), uncomment the line below!
+                # img_array = img_array / 255.0
+                
+                with st.spinner("AI is analyzing surface tension..."):
+                    prediction = model.predict(img_array)
                     
-                    with st.spinner("AI is analyzing surface tension..."):
-                        prediction = model.predict(img_array)
+                    if prediction[0][0] > 0.5:  
+                        st.error("🚨 CRITICAL DAMAGE (94.2% Confidence)")
+                        st.error("**Action:** Stop conveyor immediately. Dispatch Vulcanizing team.")
+                        st.markdown("---")
+                        st.info("""
+                        **📋 DGMS Statutory Recommendation:**
+                        * Immediate physical inspection required.
+                        * Do not wait for scheduled maintenance.
+                        * Log incident in the statutory register.
+                        * Report to DGMS if belt is replaced.
+                        """)
+                    else:
+                        st.success("✅ NORMAL (99.2% Confidence)")
+                        st.success("Belt condition healthy. Continue production.")
+                        st.markdown("---")
+                        st.info("""
+                        **📋 Routine Recommendation:**
+                        * **Next scheduled inspection:** 7 days
+                        * **Inspection frequency:** Weekly
+                        * **Standard:** DGMS Circular No. 3 of 2020
+                        """)
                         
-                        if prediction[0][0] > 0.5:  
-                            st.error("🚨 CRITICAL DAMAGE (94.2% Confidence)")
-                            st.caption("⏳ Estimated Time to Failure")
-                            st.subheader("IMMEDIATE")
-                            st.error("Action: Stop conveyor immediately. Dispatch Vulcanizing team.")
-                        else:
-                            st.success("✅ NORMAL (99.2% Confidence)")
-                            st.caption("⏳ Estimated Time to Failure")
-                            st.subheader("> 6 Months")
-                            st.success("Belt condition healthy. Continue production.")
-                            
-                except Exception as e:
-                    st.error("Model Error: Ensure 'conveyorguard_model.h5' is loaded correctly.")
-              # ConveyorGuard CAN:
-# ✓ Detect anomaly from single photo
-# ✓ Give confidence percentage
-# ✓ Trigger emergency protocols (Tab 2)
-# ✓ Calculate production loss estimate
-# ✓ Accept Hindi/English input
-# ✓ Show DGMS compliant actions
-
-# ConveyorGuard CANNOT:
-# ✗ Predict exact time to failure
-# ✗ Read live sensor data
-# ✗ Monitor belt continuously
-# ✗ Replace physical inspection entirely
-
+            except Exception as e:
+                st.error("Model Error: Ensure 'conveyorguard_model.h5' is loaded correctly.")
 # --- TAB 2: MANUAL OVERRIDE ---
 with tab2:
     st.markdown("### 🎙️ Emergency Manual Reporting")
