@@ -122,14 +122,15 @@ with tab1:
     st.markdown("### Upload Conveyor Belt Image")
     
     # The expander makes it collapsible, the st.warning gives it the DGMS Yellow Caution color!
-    with st.expander("📋 Pre-Inspection Safety Checklist", expanded=True):
+   with st.expander("📋 DGMS Pre-Inspection Safety Protocol", expanded=True):
         st.warning("""
-        **🟡 DGMS Safety Guidelines:**
-        * Ensure you are standing in a designated safe walkway.
-        * Do not bypass physical safety guards to take photos.
-        * Maintain a minimum 1.5m clearance from moving idlers.
+        **🟡 CRITICAL UNDERGROUND SAFETY REQUIREMENTS:**
+        * **Communication:** Inform the surface control room before beginning your inspection walk.
+        * **Clearance:** Maintain a strict 1.5m clearance from moving idlers, tail pulleys, and the drive head.
+        * **Movement:** NEVER step over, under, or onto a moving belt. Use designated crossover bridges only.
+        * **Emergency Readiness:** Visually locate the nearest emergency pull-cord before framing your photographs.
+        * **Hazard Awareness:** Ensure cap lamps are secured and report any heavy coal dust accumulation near seized rollers immediately.
         """)
-    
     uploaded_file = st.file_uploader("Drag and drop or click to upload", type=["jpg", "png", "jpeg"])
     
     if uploaded_file is not None:
