@@ -120,26 +120,24 @@ with tab1:
                 
                 if prediction < 0.5:
                     confidence = (1 - prediction) * 100
-                    st.error(f"🚨 ANOMALY DETECTED ({confidence:.1f}% Confidence)")
                     
-                    st.warning("""
-                    **⚙️ Immediate Machine Actions:**
-                    1. Trip pull-cord switch immediately.
-                    2. Isolate main drive power.
-                    3. Do not restart without clearance.
-                    """)
-                    
-                    st.error("""
-                    **👷‍♂️ CRITICAL HUMAN SAFETY PROTOCOL:**
-                    * **Evacuate:** Clear miners within a 50m radius (Snap hazard).
-                    * **LOTO:** Lockout/Tagout the power panel.
-                    * **Dust Control:** Activate local water sprinklers.
-                    """)
+                    # --- NEW: Dynamic Severity Scoring ---
+                    if confidence >= 85.0:
+                        st.error(f"🔴 CRITICAL RUPTURE ({confidence:.1f}% Confidence)")
+                        st.warning("**⚙️ Actions:** Trip pull-cord immediately. Isolate drive power.")
+                        st.error("**👷‍♂️ Protocol:** Evacuate 50m radius. Execute LOTO. Activate sprinklers.")
+                    elif confidence >= 70.0:
+                        st.warning(f"🟠 MODERATE DAMAGE ({confidence:.1f}% Confidence)")
+                        st.info("**⚙️ Actions:** Reduce speed by 50%. Schedule shift-end repair.")
+                        st.warning("**👷‍♂️ Protocol:** Clear walkway beneath flagged section.")
+                    else:
+                        st.info(f"🟡 MINOR WEAR ({confidence:.1f}% Confidence)")
+                        st.info("**⚙️ Actions:** Continue operations. Log for weekend maintenance.")
+                        
                 else:
                     confidence = prediction * 100
                     st.success(f"✅ NORMAL ({confidence:.1f}% Confidence)")
                     st.info("Belt condition healthy. Continue production.")
-
 # --- TAB 2: MANUAL OVERRIDE ---
 with tab2:
     st.markdown("### Emergency Manual Reporting")
