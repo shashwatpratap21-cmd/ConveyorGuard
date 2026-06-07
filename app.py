@@ -174,7 +174,7 @@ with tab1:
 # ✓ Accept Hindi/English input
 # ✓ Show DGMS compliant actions
 
-ConveyorGuard CANNOT:
+# ConveyorGuard CANNOT:
 # ✗ Predict exact time to failure
 # ✗ Read live sensor data
 # ✗ Monitor belt continuously
