@@ -19,7 +19,14 @@ st.write("Upload a photo of the conveyor belt for instant AI analysis.")
 @st.cache_resource
 def load_model():
     model_path = os.path.join(os.path.dirname(__file__), 'conveyorguard_model.h5')
-    model = tf.keras.models.load_model(model_path, compile=False)
+    
+    # Bypass the TrueDivide and version bugs by mapping the math operation natively
+    model = tf.keras.models.load_model(
+        model_path, 
+        compile=False,
+        safe_mode=False,
+        custom_objects={'TrueDivide': tf.math.truediv}
+    )
     return model
 
 model = None
