@@ -6,18 +6,16 @@ import os
 
 # --- Keras Version Mismatch Hacks ---
 
-# 1. INTERCEPTOR FIX: Hide the "127.5" from Keras's strict rules
+# 1. INTERCEPTOR FIX: Hide the "127.5" division from strict rules
 @tf.keras.utils.register_keras_serializable()
 class TrueDivide(tf.keras.layers.Layer):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         
     def __call__(self, inputs, *args, **kwargs):
-        # We catch the 127.5 positional argument causing your crash 
-        # and sneakily move it to a keyword argument before Keras panics.
         if len(args) > 0:
             kwargs['y'] = args[0]
-            args = tuple(args[1:]) # Clear the strict zone
+            args = tuple(args[1:])
         return super().__call__(inputs, *args, **kwargs)
 
     def call(self, inputs, y=127.5):
@@ -25,7 +23,24 @@ class TrueDivide(tf.keras.layers.Layer):
             return inputs[0] / inputs[1]
         return inputs / y
 
-# 2. Fix for the Colab Dense layer bug
+# 2. INTERCEPTOR FIX: Hide the "1.0" subtraction from strict rules
+@tf.keras.utils.register_keras_serializable()
+class Subtract(tf.keras.layers.Layer):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        
+    def __call__(self, inputs, *args, **kwargs):
+        if len(args) > 0:
+            kwargs['y'] = args[0]
+            args = tuple(args[1:])
+        return super().__call__(inputs, *args, **kwargs)
+
+    def call(self, inputs, y=1.0):
+        if isinstance(inputs, (list, tuple)) and len(inputs) == 2:
+            return inputs[0] - inputs[1]
+        return inputs - y
+
+# 3. Fix for the Colab Dense layer bug
 @tf.keras.utils.register_keras_serializable()
 class SafeDense(tf.keras.layers.Dense):
     def __init__(self, *args, **kwargs):
@@ -55,6 +70,7 @@ def load_model():
         safe_mode=False,
         custom_objects={
             'TrueDivide': TrueDivide,
+            'Subtract': Subtract,
             'Dense': SafeDense
         }
     )
