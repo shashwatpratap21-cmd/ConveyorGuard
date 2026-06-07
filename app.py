@@ -4,9 +4,7 @@ import numpy as np
 from PIL import Image
 import os
 
-# --- Keras Version Mismatch Hacks ---
-
-# 1. INTERCEPTOR FIX: Hide the "127.5" division from strict rules
+# --- Keras Version Mismatch Hacks (Tumhara original working code) ---
 @tf.keras.utils.register_keras_serializable()
 class TrueDivide(tf.keras.layers.Layer):
     def __init__(self, **kwargs):
@@ -23,7 +21,6 @@ class TrueDivide(tf.keras.layers.Layer):
             return inputs[0] / inputs[1]
         return inputs / y
 
-# 2. INTERCEPTOR FIX: Hide the "1.0" subtraction from strict rules
 @tf.keras.utils.register_keras_serializable()
 class Subtract(tf.keras.layers.Layer):
     def __init__(self, **kwargs):
@@ -40,30 +37,43 @@ class Subtract(tf.keras.layers.Layer):
             return inputs[0] - inputs[1]
         return inputs - y
 
-# 3. Fix for the Colab Dense layer bug
 @tf.keras.utils.register_keras_serializable()
 class SafeDense(tf.keras.layers.Dense):
     def __init__(self, *args, **kwargs):
         kwargs.pop('quantization_config', None)
         super().__init__(*args, **kwargs)
 
-# --- Main App Code ---
-
+# --- App Configuration (Layout ab WIDE kar diya hai) ---
 st.set_page_config(
     page_title="ConveyorGuard", 
     page_icon="⛏️", 
-    layout="centered"
+    layout="wide"
 )
 
-st.title("⛏️ ConveyorGuard")
-st.subheader("AI Belt Inspection System - Sijua Colliery Application")
-st.write("Upload a photo of the conveyor belt for instant AI analysis.")
+# --- SIDEBAR: Economic Impact Calculator ---
+st.sidebar.header("📉 Economic Impact Calculator")
+st.sidebar.markdown("Estimate financial loss during downtime.")
 
+capacity = st.sidebar.number_input("Conveyor Capacity (TPH)", min_value=100, max_value=5000, value=600, step=50)
+coal_price = st.sidebar.number_input("Coal Price (₹/t)", min_value=1000, max_value=10000, value=2200, step=100)
+downtime = st.sidebar.number_input("Predicted Downtime (h)", min_value=0.5, max_value=24.0, value=3.0, step=0.5)
+
+loss_in_lakhs = (capacity * coal_price * downtime) / 100000
+
+st.sidebar.markdown("---")
+st.sidebar.subheader("Estimated Production Loss:")
+st.sidebar.error(f"₹ {loss_in_lakhs:.2f} Lakh")
+st.sidebar.markdown("---")
+st.sidebar.info("System built for Sijua Colliery Operations.")
+
+# --- MAIN DASHBOARD HEADER ---
+st.title("⛏️ ConveyorGuard Dashboard")
+st.subheader("AI-Powered Inspection & Safety Management System")
+
+# --- MODEL LOADING ---
 @st.cache_resource
 def load_model():
     model_path = os.path.join(os.path.dirname(__file__), 'conveyorguard_model.h5')
-    
-    # Load the model and apply our hacks
     model = tf.keras.models.load_model(
         model_path, 
         compile=False,
@@ -76,48 +86,30 @@ def load_model():
     )
     return model
 
-model = None
 try:
     model = load_model()
-    st.success("✅ Model loaded successfully")
 except Exception as e:
     st.error(f"Model loading failed: {str(e)}")
     st.stop()
 
-uploaded_file = st.file_uploader(
-    "Drag and drop or click to upload", 
-    type=["jpg", "png", "jpeg"]
-)
+# --- TABS LAYOUT ---
+tab1, tab2, tab3 = st.tabs(["🚨 AI Vision Inspection", "📝 Manual Override (Codes)", "🛠️ Maintenance Scheduler"])
 
-if uploaded_file is not None:
-    # Safely convert all images to 3-channel RGB to prevent PNG crashes
-    image = Image.open(uploaded_file).convert('RGB')
-    st.image(image, caption='Uploaded Belt Photo', use_container_width=True)
-    
-    with st.spinner('Analyzing belt condition...'):
-        img = image.resize((224, 224))
-        img_array = tf.keras.preprocessing.image.img_to_array(img)
-        img_array = tf.expand_dims(img_array, 0)
+# --- TAB 1: AI INSPECTION (Tumhara working AI logic) ---
+with tab1:
+    st.markdown("### Upload Conveyor Belt Image")
+    uploaded_file = st.file_uploader("Drag and drop or click to upload", type=["jpg", "png", "jpeg"])
+
+    if uploaded_file is not None:
+        image = Image.open(uploaded_file).convert('RGB')
         
-        # Predict directly on the raw image array
-        prediction = model.predict(img_array)[0][0]
+        # UI Upgrade: Image left side, Results right side
+        col1, col2 = st.columns(2)
         
-        st.markdown("---")
-        st.subheader("Inspection Result:")
+        with col1:
+            st.image(image, caption='Live Belt Feed', use_container_width=True)
         
-        if prediction < 0.5:
-            confidence = (1 - prediction) * 100
-            st.error(f"🚨 ANOMALY DETECTED")
-            st.metric("Confidence", f"{confidence:.1f}%")
-            st.warning("""
-            **Immediate Actions Required:**
-            1. Stop belt immediately
-            2. Notify shift engineer
-            3. Physically inspect flagged section
-            4. Do not restart without clearance
-            """)
-        else:
-            confidence = prediction * 100
-            st.success(f"✅ NORMAL")
-            st.metric("Confidence", f"{confidence:.1f}%")
-            st.info("Belt condition healthy. Continue production.")
+        with col2:
+            with st.spinner('Analyzing belt condition...'):
+                img = image.resize((224, 224))
+                img
