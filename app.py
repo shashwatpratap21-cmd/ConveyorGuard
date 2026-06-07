@@ -98,6 +98,15 @@ tab1, tab2, tab3 = st.tabs(["🚨 AI Vision Inspection", "📝 Manual Override (
 # --- TAB 1: AI INSPECTION ---
 with tab1:
     st.markdown("### Upload Conveyor Belt Image")
+    
+    # --- NEW: Safety Precautions directly below the description ---
+    st.info("""
+    **👷‍♂️ Pre-Inspection Safety Checklist (DGMS Guidelines):**
+    * Ensure you are standing in a designated safe walkway.
+    * Do not bypass physical safety guards to take photos.
+    * Maintain a minimum 1.5m clearance from moving idlers.
+    """)
+    
     uploaded_file = st.file_uploader("Drag and drop or click to upload", type=["jpg", "png", "jpeg"])
 
     if uploaded_file is not None:
@@ -121,22 +130,29 @@ with tab1:
                 if prediction < 0.5:
                     confidence = (1 - prediction) * 100
                     
-                    # --- NEW: Dynamic Severity Scoring ---
                     if confidence >= 85.0:
                         st.error(f"🔴 CRITICAL RUPTURE ({confidence:.1f}% Confidence)")
+                        # --- NEW: Time to Failure Metric ---
+                        st.metric("⏳ Estimated Time to Failure", "IMMEDIATE (0 Hours)")
                         st.warning("**⚙️ Actions:** Trip pull-cord immediately. Isolate drive power.")
                         st.error("**👷‍♂️ Protocol:** Evacuate 50m radius. Execute LOTO. Activate sprinklers.")
                     elif confidence >= 70.0:
                         st.warning(f"🟠 MODERATE DAMAGE ({confidence:.1f}% Confidence)")
+                        # --- NEW: Time to Failure Metric ---
+                        st.metric("⏳ Estimated Time to Failure", "48 - 72 Hours")
                         st.info("**⚙️ Actions:** Reduce speed by 50%. Schedule shift-end repair.")
                         st.warning("**👷‍♂️ Protocol:** Clear walkway beneath flagged section.")
                     else:
                         st.info(f"🟡 MINOR WEAR ({confidence:.1f}% Confidence)")
+                        # --- NEW: Time to Failure Metric ---
+                        st.metric("⏳ Estimated Time to Failure", "2 - 4 Weeks")
                         st.info("**⚙️ Actions:** Continue operations. Log for weekend maintenance.")
                         
                 else:
                     confidence = prediction * 100
                     st.success(f"✅ NORMAL ({confidence:.1f}% Confidence)")
+                    # --- NEW: Time to Failure Metric ---
+                    st.metric("⏳ Estimated Time to Failure", "> 6 Months")
                     st.info("Belt condition healthy. Continue production.")
 # --- TAB 2: MANUAL OVERRIDE ---
 with tab2:
