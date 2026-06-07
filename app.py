@@ -99,13 +99,13 @@ tab1, tab2, tab3 = st.tabs(["🚨 AI Vision Inspection", "📝 Manual Override (
 with tab1:
     st.markdown("### Upload Conveyor Belt Image")
     
-    # --- NEW: Safety Precautions directly below the description ---
-    st.info("""
-    **👷‍♂️ Pre-Inspection Safety Checklist (DGMS Guidelines):**
-    * Ensure you are standing in a designated safe walkway.
-    * Do not bypass physical safety guards to take photos.
-    * Maintain a minimum 1.5m clearance from moving idlers.
-    """)
+    # --- NEW: Collapsible Safety Checklist ---
+    with st.expander("👷‍♂️ View Pre-Inspection Safety Checklist (DGMS Guidelines)", expanded=True):
+        st.write("""
+        * Ensure you are standing in a designated safe walkway.
+        * Do not bypass physical safety guards to take photos.
+        * Maintain a minimum 1.5m clearance from moving idlers.
+        """)
     
     uploaded_file = st.file_uploader("Drag and drop or click to upload", type=["jpg", "png", "jpeg"])
 
