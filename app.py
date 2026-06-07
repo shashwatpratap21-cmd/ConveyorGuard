@@ -58,13 +58,17 @@ capacity = st.sidebar.number_input("Conveyor Capacity (TPH)", min_value=100, max
 coal_price = st.sidebar.number_input("Coal Price (₹/t)", min_value=1000, max_value=10000, value=2200, step=100)
 downtime = st.sidebar.number_input("Predicted Downtime (h)", min_value=0.5, max_value=24.0, value=3.0, step=0.5)
 
-loss_in_lakhs = (capacity * coal_price * downtime) / 100000
+# Financial Math
+hourly_loss_lakhs = (capacity * coal_price) / 100000
+total_loss_lakhs = hourly_loss_lakhs * downtime
 
 st.sidebar.markdown("---")
 st.sidebar.subheader("Estimated Production Loss:")
-st.sidebar.error(f"₹ {loss_in_lakhs:.2f} Lakh")
+st.sidebar.error(f"🚨 ₹ {total_loss_lakhs:.2f} Lakh")
+
+# Suggestion 1: Sijua Colliery Context
+st.sidebar.caption("Based on Sijua Colliery average capacity of 600 TPH at ₹2,200/tonne coal price.")
 st.sidebar.markdown("---")
-st.sidebar.info("System built for Sijua Colliery Operations.")
 
 # --- MAIN DASHBOARD HEADER ---
 st.title("⛏️ ConveyorGuard Dashboard")
@@ -78,11 +82,7 @@ def load_model():
         model_path, 
         compile=False,
         safe_mode=False,
-        custom_objects={
-            'TrueDivide': TrueDivide,
-            'Subtract': Subtract,
-            'Dense': SafeDense
-        }
+        custom_objects={'TrueDivide': TrueDivide, 'Subtract': Subtract, 'Dense': SafeDense}
     )
     return model
 
@@ -99,13 +99,13 @@ tab1, tab2, tab3 = st.tabs(["🚨 AI Vision Inspection", "📝 Manual Override (
 with tab1:
     st.markdown("### Upload Conveyor Belt Image")
     
-    # --- NEW: Collapsible Safety Checklist ---
-    with st.expander("👷‍♂️ View Pre-Inspection Safety Checklist (DGMS Guidelines)", expanded=True):
-        st.write("""
-        * Ensure you are standing in a designated safe walkway.
-        * Do not bypass physical safety guards to take photos.
-        * Maintain a minimum 1.5m clearance from moving idlers.
-        """)
+    # Suggestion 3: DGMS Yellow for Safety Checklist
+    st.warning("""
+    **🟡 Pre-Inspection Safety Checklist (DGMS Guidelines):**
+    * Ensure you are standing in a designated safe walkway.
+    * Do not bypass physical safety guards to take photos.
+    * Maintain a minimum 1.5m clearance from moving idlers.
+    """)
     
     uploaded_file = st.file_uploader("Drag and drop or click to upload", type=["jpg", "png", "jpeg"])
 
@@ -131,29 +131,46 @@ with tab1:
                     confidence = (1 - prediction) * 100
                     
                     if confidence >= 85.0:
+                        # Suggestion 3: DGMS Red for Critical Alerts
                         st.error(f"🔴 CRITICAL RUPTURE ({confidence:.1f}% Confidence)")
-                        # --- NEW: Time to Failure Metric ---
+                        
+                        # Suggestion 2: Connect AI to Hourly Cost
+                        st.error(f"💸 **Estimated cost if ignored:** ₹ {hourly_loss_lakhs:.2f} Lakh per hour of continued operation.")
+                        
                         st.metric("⏳ Estimated Time to Failure", "IMMEDIATE (0 Hours)")
-                        st.warning("**⚙️ Actions:** Trip pull-cord immediately. Isolate drive power.")
-                        st.error("**👷‍♂️ Protocol:** Evacuate 50m radius. Execute LOTO. Activate sprinklers.")
+                        st.error("""
+                        **🔴 Immediate Actions Required:**
+                        * Trip pull-cord immediately. 
+                        * Isolate drive power.
+                        * Evacuate 50m radius. Execute LOTO. 
+                        * Activate sprinklers.
+                        """)
                     elif confidence >= 70.0:
                         st.warning(f"🟠 MODERATE DAMAGE ({confidence:.1f}% Confidence)")
-                        # --- NEW: Time to Failure Metric ---
                         st.metric("⏳ Estimated Time to Failure", "48 - 72 Hours")
-                        st.info("**⚙️ Actions:** Reduce speed by 50%. Schedule shift-end repair.")
-                        st.warning("**👷‍♂️ Protocol:** Clear walkway beneath flagged section.")
+                        st.warning("""
+                        **🟠 Required Actions:**
+                        * Reduce speed by 50%. 
+                        * Clear walkway beneath flagged section.
+                        * Schedule shift-end repair.
+                        """)
                     else:
                         st.info(f"🟡 MINOR WEAR ({confidence:.1f}% Confidence)")
-                        # --- NEW: Time to Failure Metric ---
                         st.metric("⏳ Estimated Time to Failure", "2 - 4 Weeks")
-                        st.info("**⚙️ Actions:** Continue operations. Log for weekend maintenance.")
+                        
+                        # Suggestion 3: DGMS Blue for Maintenance Advisory
+                        st.info("""
+                        **🔵 Maintenance Advisory:**
+                        * Continue operations. 
+                        * Log anomaly for weekend maintenance visual check.
+                        """)
                         
                 else:
                     confidence = prediction * 100
                     st.success(f"✅ NORMAL ({confidence:.1f}% Confidence)")
-                    # --- NEW: Time to Failure Metric ---
                     st.metric("⏳ Estimated Time to Failure", "> 6 Months")
-                    st.info("Belt condition healthy. Continue production.")
+                    st.success("Belt condition healthy. Continue production.")
+
 # --- TAB 2: MANUAL OVERRIDE ---
 with tab2:
     st.markdown("### Emergency Manual Reporting")
@@ -164,10 +181,10 @@ with tab2:
     if incident_code:
         if incident_code == "TEAR":
             st.error("🚨 CODE TEAR LOGGED: Severe belt rupture reported manually.")
-            st.warning("Action: Stop belt. Dispatch vulcanizing crew immediately.")
+            st.error("Action: Stop belt. Dispatch vulcanizing crew immediately.")
         elif incident_code == "SPIL":
             st.warning("⚠️ CODE SPIL LOGGED: Coal spillage blocking idlers.")
-            st.info("Action: Dispatch cleaning crew to avoid friction fires.")
+            st.warning("Action: Dispatch cleaning crew to avoid friction fires.")
         elif incident_code == "FIRE":
             st.error("🔥 CODE FIRE LOGGED: Friction smoke detected.")
             st.error("CRITICAL: Evacuate district. Turn on main suppression systems.")
@@ -188,8 +205,8 @@ with tab3:
     st.subheader(f"📋 Maintenance Schedule for {machine_age} Months Old {belt_type}")
     
     if machine_age <= 6:
-        st.info("**Routine Checks (0-6 Months):**\n* Visual inspection of belt tracking.\n* Check for unusual noise from idlers.")
+        st.info("**🔵 Routine Checks (0-6 Months):**\n* Visual inspection of belt tracking.\n* Check for unusual noise from idlers.")
     elif 6 < machine_age <= 24:
-        st.warning("**Mid-Term Maintenance (6-24 Months):**\n* Lubricate all tail and drive pulleys.\n* Ultrasonic thickness test on belt cover.")
+        st.warning("**🟠 Mid-Term Maintenance (6-24 Months):**\n* Lubricate all tail and drive pulleys.\n* Ultrasonic thickness test on belt cover.")
     else:
-        st.error("**Critical Overhaul (>24 Months):**\n* Full structural audit.\n* Replace seized idlers.\n* Test all emergency pull-cords.")
+        st.error("**🔴 Critical Overhaul (>24 Months):**\n* Full structural audit.\n* Replace seized idlers.\n* Test all emergency pull-cords.")
