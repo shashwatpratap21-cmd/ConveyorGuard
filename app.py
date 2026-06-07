@@ -174,32 +174,32 @@ with tab1:
 # --- TAB 2: MANUAL OVERRIDE ---
 with tab2:
     st.markdown("### 🎙️ Emergency Manual Reporting")
-    st.write("Use your device's **Microphone (Dictation)**. You can speak in English, Hindi, or Hinglish.")
+    st.write("Use your device's **Microphone (Dictation)** or type a description. Regional languages are supported via dictation.")
     
-    incident_report = st.text_area("Describe the issue (e.g., 'Belt fat gayi hai' or 'Aag lag gayi'):").upper()
+    # Professionalized the prompt text
+    incident_report = st.text_area("Describe the incident in detail:").upper()
     
-    if incident_report:
-        # Multilingual Keyword Extraction (English + Hindi/Hinglish)
-        
-        # Checking for Tear/Break keywords (Fata, Phat, Tut, Kata)
-        if any(word in incident_report for word in ["TEAR", "CUT", "RUPTURE", "BROKEN", "FAT", "PHAT", "TUT", "KATA"]):
-            st.error("🚨 CRITICAL ALERT LOGGED: Belt Tear/Rupture detected in report.")
-            st.error("**Action:** Stop belt immediately. Dispatch vulcanizing crew.")
-            
-        # Checking for Spillage/Jam keywords (Gir, Fas, Phas, Ruk, Jam)
-        elif any(word in incident_report for word in ["SPIL", "BLOCK", "OVERFLOW", "JAM", "GIR", "FAS", "PHAS", "RUK"]):
-            st.warning("⚠️ WARNING LOGGED: Material spillage or blockage reported.")
-            st.warning("**Action:** Dispatch cleaning crew to clear idlers and avoid friction fires.")
-            
-        # Checking for Fire/Smoke keywords (Aag, Dhua, Jal)
-        elif any(word in incident_report for word in ["FIRE", "SMOKE", "BURNING", "SPARK", "AAG", "DHUA", "JAL", "DHUAN"]):
-            st.error("🔥 FIRE EMERGENCY LOGGED: Combustion indicators detected.")
-            st.error("**CRITICAL:** Evacuate district. Turn on main suppression systems. Alert DGMS.")
-            
+    # Added a dedicated physical submit button (DGMS Red style)
+    if st.button("🚨 Submit Emergency Report", type="primary"):
+        if incident_report:
+            # Multilingual Keyword Extraction (Hidden in the backend)
+            if any(word in incident_report for word in ["TEAR", "CUT", "RUPTURE", "BROKEN", "FAT", "PHAT", "TUT", "KATA"]):
+                st.error("🚨 CRITICAL ALERT LOGGED: Belt Tear/Rupture detected.")
+                st.error("**Action:** Stop belt immediately. Dispatch vulcanizing crew.")
+                
+            elif any(word in incident_report for word in ["SPIL", "BLOCK", "OVERFLOW", "JAM", "GIR", "FAS", "PHAS", "RUK"]):
+                st.warning("⚠️ WARNING LOGGED: Material spillage or blockage reported.")
+                st.warning("**Action:** Dispatch cleaning crew to clear idlers and avoid friction fires.")
+                
+            elif any(word in incident_report for word in ["FIRE", "SMOKE", "BURNING", "SPARK", "AAG", "DHUA", "JAL", "DHUAN"]):
+                st.error("🔥 FIRE EMERGENCY LOGGED: Combustion indicators detected.")
+                st.error("**CRITICAL:** Evacuate district. Turn on main suppression systems. Alert DGMS.")
+                
+            else:
+                st.info("📝 General log received. Control room notified for verification.")
+                st.write(f"**Recorded Log:** {incident_report}")
         else:
-            st.info("📝 General log received. Control room notified for verification.")
-            st.write(f"**Recorded Log:** {incident_report}")
-
+            st.warning("Please enter a description before submitting.")
 # --- TAB 3: MAINTENANCE SCHEDULER ---
 with tab3:
     st.markdown("### ⚙️ Time-Based Preventive Maintenance")
