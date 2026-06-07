@@ -4,7 +4,7 @@ import numpy as np
 from PIL import Image
 import os
 
-# --- Keras Version Mismatch Hacks (Tumhara original working code) ---
+# --- Keras Version Mismatch Hacks ---
 @tf.keras.utils.register_keras_serializable()
 class TrueDivide(tf.keras.layers.Layer):
     def __init__(self, **kwargs):
@@ -43,7 +43,7 @@ class SafeDense(tf.keras.layers.Dense):
         kwargs.pop('quantization_config', None)
         super().__init__(*args, **kwargs)
 
-# --- App Configuration (Layout ab WIDE kar diya hai) ---
+# --- App Configuration ---
 st.set_page_config(
     page_title="ConveyorGuard", 
     page_icon="⛏️", 
@@ -95,15 +95,14 @@ except Exception as e:
 # --- TABS LAYOUT ---
 tab1, tab2, tab3 = st.tabs(["🚨 AI Vision Inspection", "📝 Manual Override (Codes)", "🛠️ Maintenance Scheduler"])
 
-# --- TAB 1: AI INSPECTION (Tumhara working AI logic) ---
+# --- TAB 1: AI INSPECTION ---
 with tab1:
     st.markdown("### Upload Conveyor Belt Image")
     uploaded_file = st.file_uploader("Drag and drop or click to upload", type=["jpg", "png", "jpeg"])
 
-if uploaded_file is not None:
+    if uploaded_file is not None:
         image = Image.open(uploaded_file).convert('RGB')
         
-        # UI Upgrade: Image left side, Results right side
         col1, col2 = st.columns(2)
         
         with col1:
@@ -112,4 +111,71 @@ if uploaded_file is not None:
         with col2:
             with st.spinner('Analyzing belt condition...'):
                 img = image.resize((224, 224))
-                img
+                img_array = tf.keras.preprocessing.image.img_to_array(img)
+                img_array = tf.expand_dims(img_array, 0)
+                
+                prediction = model.predict(img_array)[0][0]
+                
+                st.subheader("Inspection Verdict:")
+                
+                if prediction < 0.5:
+                    confidence = (1 - prediction) * 100
+                    st.error(f"🚨 ANOMALY DETECTED ({confidence:.1f}% Confidence)")
+                    
+                    st.warning("""
+                    **⚙️ Immediate Machine Actions:**
+                    1. Trip pull-cord switch immediately.
+                    2. Isolate main drive power.
+                    3. Do not restart without clearance.
+                    """)
+                    
+                    st.error("""
+                    **👷‍♂️ CRITICAL HUMAN SAFETY PROTOCOL:**
+                    * **Evacuate:** Clear miners within a 50m radius (Snap hazard).
+                    * **LOTO:** Lockout/Tagout the power panel.
+                    * **Dust Control:** Activate local water sprinklers.
+                    """)
+                else:
+                    confidence = prediction * 100
+                    st.success(f"✅ NORMAL ({confidence:.1f}% Confidence)")
+                    st.info("Belt condition healthy. Continue production.")
+
+# --- TAB 2: MANUAL OVERRIDE ---
+with tab2:
+    st.markdown("### Emergency Manual Reporting")
+    st.write("Use this if the camera is covered in dust or network is too slow for image uploads.")
+    
+    incident_code = st.text_input("Enter 4-Letter Emergency Code (e.g., TEAR, SPIL, FIRE):").upper()
+    
+    if incident_code:
+        if incident_code == "TEAR":
+            st.error("🚨 CODE TEAR LOGGED: Severe belt rupture reported manually.")
+            st.warning("Action: Stop belt. Dispatch vulcanizing crew immediately.")
+        elif incident_code == "SPIL":
+            st.warning("⚠️ CODE SPIL LOGGED: Coal spillage blocking idlers.")
+            st.info("Action: Dispatch cleaning crew to avoid friction fires.")
+        elif incident_code == "FIRE":
+            st.error("🔥 CODE FIRE LOGGED: Friction smoke detected.")
+            st.error("CRITICAL: Evacuate district. Turn on main suppression systems.")
+        else:
+            st.info(f"Log received: {incident_code}. Control room notified for verification.")
+
+# --- TAB 3: MAINTENANCE SCHEDULER ---
+with tab3:
+    st.markdown("### ⚙️ Time-Based Preventive Maintenance")
+    
+    col3, col4 = st.columns(2)
+    with col3:
+        belt_type = st.selectbox("Select Conveyor Belt Type", ["PVC Fire-Resistant (Underground)", "Steel Cord", "Nylon/Fabric Belt"])
+    with col4:
+        machine_age = st.number_input("Operating Time (Months)", min_value=1, max_value=120, value=6)
+    
+    st.markdown("---")
+    st.subheader(f"📋 Maintenance Schedule for {machine_age} Months Old {belt_type}")
+    
+    if machine_age <= 6:
+        st.info("**Routine Checks (0-6 Months):**\n* Visual inspection of belt tracking.\n* Check for unusual noise from idlers.")
+    elif 6 < machine_age <= 24:
+        st.warning("**Mid-Term Maintenance (6-24 Months):**\n* Lubricate all tail and drive pulleys.\n* Ultrasonic thickness test on belt cover.")
+    else:
+        st.error("**Critical Overhaul (>24 Months):**\n* Full structural audit.\n* Replace seized idlers.\n* Test all emergency pull-cords.")
