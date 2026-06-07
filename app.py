@@ -121,9 +121,10 @@ tab1, tab2, tab3 = st.tabs(["🚨 AI Vision Inspection", "📝 Manual Override (
 with tab1:
     st.markdown("### Upload Conveyor Belt Image")
     
-    # This is the box that can be minimized!
-    with st.expander("🟡 Pre-Inspection Safety Checklist (DGMS Guidelines):", expanded=True):
-        st.markdown("""
+    # The expander makes it collapsible, the st.warning gives it the DGMS Yellow Caution color!
+    with st.expander("📋 Pre-Inspection Safety Checklist", expanded=True):
+        st.warning("""
+        **🟡 DGMS Safety Guidelines:**
         * Ensure you are standing in a designated safe walkway.
         * Do not bypass physical safety guards to take photos.
         * Maintain a minimum 1.5m clearance from moving idlers.
@@ -134,7 +135,7 @@ with tab1:
     if uploaded_file is not None:
         image = Image.open(uploaded_file)
         
-        # Creates the beautiful side-by-side layout you had before
+        # Creates the side-by-side layout
         col_img, col_results = st.columns([1.5, 1])
         
         with col_img:
@@ -154,11 +155,13 @@ with tab1:
                         prediction = model.predict(img_array)
                         
                         if prediction[0][0] > 0.5:  
+                            # DGMS RED for Critical Danger
                             st.error("🚨 CRITICAL DAMAGE (94.2% Confidence)")
                             st.caption("⏳ Estimated Time to Failure")
                             st.subheader("IMMEDIATE")
                             st.error("Action: Stop conveyor immediately. Dispatch Vulcanizing team.")
                         else:
+                            # DGMS GREEN for Safe/Healthy
                             st.success("✅ NORMAL (99.2% Confidence)")
                             st.caption("⏳ Estimated Time to Failure")
                             st.subheader("> 6 Months")
