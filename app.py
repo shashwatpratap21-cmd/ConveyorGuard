@@ -165,7 +165,24 @@ with tab1:
                             st.success("Belt condition healthy. Continue production.")
                             
                 except Exception as e:
-                    st.error("Model Error: Ensure 'conveyorguard_model.h5' is loaded correctly.")
+                    st.error("Model Error: Ensure 'conveyorguard_model.h5' is loaded correctly.")ConveyorGuard CAN:
+✓ Detect anomaly from single photo
+✓ Give confidence percentage
+✓ Trigger emergency protocols (Tab 2)
+✓ Calculate production loss estimate
+✓ Accept Hindi/English input
+✓ Show DGMS compliant actions
+
+ConveyorGuard CANNOT:
+✗ Predict exact time to failure
+✗ Read live sensor data
+✗ Monitor belt continuously
+✗ Replace physical inspection entirely
+
+Knowing your boundaries = 
+engineering maturity =
+what separates good engineers
+from overconfident ones
 # --- TAB 2: MANUAL OVERRIDE ---
 with tab2:
     st.markdown("### 🎙️ Emergency Manual Reporting")
