@@ -3,8 +3,32 @@ import tensorflow as tf
 import numpy as np
 from PIL import Image
 import os
+from twilio.rest import Client
 
+# =========================================================================
+# --- TWILIO SMS CONFIGURATION ---
+# =========================================================================
+def send_emergency_sms(alert_type, details):
+  TWILIO_SID = st.secrets["TWILIO_SID"]
+  TWILIO_TOKEN = st.secrets["TWILIO_TOKEN"]
+    TWILIO_NUMBER = "+13367042789" 
+    TARGET_PHONE = "+918467068023" 
+
+    try:
+        client = Client(TWILIO_SID, TWILIO_TOKEN)
+        message = client.messages.create(
+            body=f"🚨 CONVEYORGUARD ALERT: {alert_type}\nLocation: Sijua Colliery\nDetails: {details}\nAction Required Immediately.",
+            from_=TWILIO_NUMBER,
+            to=TARGET_PHONE
+        )
+        return True
+    except Exception as e:
+        st.error(f"SMS Delivery Failed: {e}")
+        return False
+
+# =========================================================================
 # --- Keras Version Mismatch Hacks ---
+# =========================================================================
 @tf.keras.utils.register_keras_serializable()
 class TrueDivide(tf.keras.layers.Layer):
     def __init__(self, **kwargs):
@@ -43,7 +67,9 @@ class SafeDense(tf.keras.layers.Dense):
         kwargs.pop('quantization_config', None)
         super().__init__(*args, **kwargs)
 
+# =========================================================================
 # --- App Configuration ---
+# =========================================================================
 st.set_page_config(
     page_title="ConveyorGuard", 
     page_icon="⛏️", 
@@ -65,8 +91,6 @@ total_loss_lakhs = hourly_loss_lakhs * downtime
 st.sidebar.markdown("---")
 st.sidebar.subheader("Estimated Production Loss:")
 st.sidebar.error(f"🚨 ₹ {total_loss_lakhs:.2f} Lakh")
-
-# Suggestion 1: Sijua Colliery Context
 st.sidebar.caption("Based on Sijua Colliery average capacity of 600 TPH at ₹2,200/tonne coal price.")
 st.sidebar.markdown("---")
 
@@ -89,8 +113,7 @@ def load_model():
 try:
     model = load_model()
 except Exception as e:
-    st.error(f"Model loading failed: {str(e)}")
-    st.stop()
+    st.warning("No image model found in this folder. AI Vision Tab is disabled for this test.")
 
 # --- TABS LAYOUT ---
 tab1, tab2, tab3 = st.tabs(["🚨 AI Vision Inspection", "📝 Manual Override (Codes)", "🛠️ Maintenance Scheduler"])
@@ -98,110 +121,34 @@ tab1, tab2, tab3 = st.tabs(["🚨 AI Vision Inspection", "📝 Manual Override (
 # --- TAB 1: AI INSPECTION ---
 with tab1:
     st.markdown("### Upload Conveyor Belt Image")
-    
-    # Suggestion 3: DGMS Yellow for Safety Checklist (Now Minimizable!)
-    with st.expander("🟡 View Pre-Inspection Safety Checklist (DGMS Guidelines)", expanded=False):
-        st.warning("""
-        * Ensure you are standing in a designated safe walkway.
-        * Do not bypass physical safety guards to take photos.
-        * Maintain a minimum 1.5m clearance from moving idlers.
-        """)
-    
-    uploaded_file = st.file_uploader("Drag and drop or click to upload", type=["jpg", "png", "jpeg"])
-
-    if uploaded_file is not None:
-        image = Image.open(uploaded_file).convert('RGB')
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.image(image, caption='Live Belt Feed', use_container_width=True)
-        
-        with col2:
-            with st.spinner('Analyzing belt condition...'):
-                img = image.resize((224, 224))
-                img_array = tf.keras.preprocessing.image.img_to_array(img)
-                img_array = tf.expand_dims(img_array, 0)
-                
-                prediction = model.predict(img_array)[0][0]
-                
-                st.subheader("Inspection Verdict:")
-                
-                if prediction < 0.5:
-                    confidence = (1 - prediction) * 100
-                    
-                    if confidence >= 85.0:
-                        # Suggestion 3: DGMS Red for Critical Alerts
-                        st.error(f"🔴 CRITICAL RUPTURE ({confidence:.1f}% Confidence)")
-                        
-                        # Suggestion 2: Connect AI to Hourly Cost
-                        st.error(f"💸 **Estimated cost if ignored:** ₹ {hourly_loss_lakhs:.2f} Lakh per hour of continued operation.")
-                        
-                        st.metric("⏳ Estimated Time to Failure", "IMMEDIATE (0 Hours)")
-                        st.error("""
-                        **🔴 Immediate Actions Required:**
-                        * Trip pull-cord immediately. 
-                        * Isolate drive power.
-                        * Evacuate 50m radius. Execute LOTO. 
-                        * Activate sprinklers.
-                        """)
-                    elif confidence >= 70.0:
-                        st.warning(f"🟠 MODERATE DAMAGE ({confidence:.1f}% Confidence)")
-                        st.metric("⏳ Estimated Time to Failure", "48 - 72 Hours")
-                        st.warning("""
-                        **🟠 Required Actions:**
-                        * Reduce speed by 50%. 
-                        * Clear walkway beneath flagged section.
-                        * Schedule shift-end repair.
-                        """)
-                    else:
-                        st.info(f"🟡 MINOR WEAR ({confidence:.1f}% Confidence)")
-                        st.metric("⏳ Estimated Time to Failure", "2 - 4 Weeks")
-                        
-                        # Suggestion 3: DGMS Blue for Maintenance Advisory
-                        st.info("""
-                        **🔵 Maintenance Advisory:**
-                        * Continue operations. 
-                        * Log anomaly for weekend maintenance visual check.
-                        """)
-                        
-                else:
-                    confidence = prediction * 100
-                    st.success(f"✅ NORMAL ({confidence:.1f}% Confidence)")
-                    st.metric("⏳ Estimated Time to Failure", "> 6 Months")
-                    st.success("Belt condition healthy. Continue production.")
+    st.info("Head over to Tab 2 to test the SMS functionality!")
 
 # --- TAB 2: MANUAL OVERRIDE ---
 with tab2:
     st.markdown("### 🎙️ Emergency Manual Reporting")
     st.write("Use your device's **Microphone (Dictation)**. Regional languages are supported.")
     
-    # Language Toggle
     lang = st.radio("Response Language / उत्तर की भाषा:", ["English", "हिंदी"], horizontal=True)
     st.info("🇮🇳 Supported inputs: English, Hindi, or Hinglish (e.g., 'belt fat gaya', 'aag lag gayi', 'paani aa raha hai')")
     
-    # 1. Initialize the Memory (Session State)
     if 'saved_report' not in st.session_state:
         st.session_state.saved_report = ""
 
-    # 2. Add 'key="incident_input"' so the text box remembers what was typed
     prompt_text = "Describe the incident in detail:" if lang == "English" else "घटना का विस्तार से वर्णन करें:"
     incident_report = st.text_area(prompt_text, key="incident_input").upper()
     
     submit_text = "🚨 Submit Emergency Report" if lang == "English" else "🚨 आपातकालीन रिपोर्ट दर्ज करें"
     
-    # 3. When button is clicked, save the text to memory
     if st.button(submit_text, type="primary"):
         if incident_report:
             st.session_state.saved_report = incident_report
         else:
             st.warning("Please enter a description before submitting." if lang == "English" else "कृपया सबमिट करने से पहले विवरण दर्ज करें।")
 
-    # 4. Display results based on the MEMORY, not the button click
     if st.session_state.saved_report:
         active_report = st.session_state.saved_report
         
-        # 1. Belt Tear
+        # 1. Belt Tear (WITH SMS)
         if any(word in active_report for word in ["TEAR", "CUT", "RUPTURE", "BROKEN", "FAT", "TOOT", "FATA", "TUTA"]):
             if lang == "English":
                 st.error("🚨 CRITICAL ALERT LOGGED: Belt Tear/Rupture detected.")
@@ -209,8 +156,15 @@ with tab2:
             else:
                 st.error("🚨 गंभीर चेतावनी: बेल्ट फटने की सूचना मिली है।")
                 st.error("**कार्रवाई (Action):** तुरंत बेल्ट रोकें। मरम्मत टीम (Vulcanizing crew) को भेजें।")
+            
+            st.markdown("---")
+            if st.button("📱 Dispatch SMS Alert to Shift Engineer", key="sms_tear"):
+                with st.spinner("Pinging mobile network..."):
+                    success = send_emergency_sms("Critical Belt Rupture", active_report)
+                    if success:
+                        st.success("✅ SMS Alert successfully delivered to Shift Engineer's mobile.")
                 
-        # 2. Fire/Smoke
+        # 2. Fire/Smoke (WITH SMS)
         elif any(word in active_report for word in ["FIRE", "SMOKE", "BURNING", "SPARK", "AAG", "DHUAN", "JALA", "SULAG"]):
             if lang == "English":
                 st.error("🔥 FIRE EMERGENCY LOGGED: Combustion indicators detected.")
@@ -218,6 +172,13 @@ with tab2:
             else:
                 st.error("🔥 आग आपातकाल: आग या धुएं की सूचना मिली है।")
                 st.error("**खतरा (CRITICAL):** तुरंत खदान खाली करें। वाटर स्प्रिंकलर (Water sprinklers) चालू करें। DGMS को अलर्ट करें।")
+            
+            st.markdown("---")
+            if st.button("📱 Dispatch SMS Alert to Rescue Team", key="sms_fire"):
+                with st.spinner("Pinging mobile network..."):
+                    success = send_emergency_sms("Underground Fire Detected", active_report)
+                    if success:
+                        st.success("✅ SMS Alert successfully delivered to Rescue Team's mobile.")
                 
         # 3. Spillage/Blockage
         elif any(word in active_report for word in ["SPIL", "BLOCK", "OVERFLOW", "JAM", "GIRA", "BHAR", "RUKA", "BAND"]):
@@ -242,6 +203,7 @@ with tab2:
                 st.info("📝 General log received. Control room notified for verification.")
             else:
                 st.info("📝 रिपोर्ट दर्ज कर ली गई है। वेरिफिकेशन के लिए कंट्रोल रूम को सूचित कर दिया गया है।")
+
 # --- TAB 3: MAINTENANCE SCHEDULER ---
 with tab3:
     st.markdown("### ⚙️ Time-Based Preventive Maintenance")
