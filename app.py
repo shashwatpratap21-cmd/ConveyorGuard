@@ -173,23 +173,32 @@ with tab1:
 
 # --- TAB 2: MANUAL OVERRIDE ---
 with tab2:
-    st.markdown("### Emergency Manual Reporting")
-    st.write("Use this if the camera is covered in dust or network is too slow for image uploads.")
+    st.markdown("### 🎙️ Emergency Manual Reporting")
+    st.write("Use your device's **Microphone (Dictation)**. You can speak in English, Hindi, or Hinglish.")
     
-    incident_code = st.text_input("Enter 4-Letter Emergency Code (e.g., TEAR, SPIL, FIRE):").upper()
+    incident_report = st.text_area("Describe the issue (e.g., 'Belt fat gayi hai' or 'Aag lag gayi'):").upper()
     
-    if incident_code:
-        if incident_code == "TEAR":
-            st.error("🚨 CODE TEAR LOGGED: Severe belt rupture reported manually.")
-            st.error("Action: Stop belt. Dispatch vulcanizing crew immediately.")
-        elif incident_code == "SPIL":
-            st.warning("⚠️ CODE SPIL LOGGED: Coal spillage blocking idlers.")
-            st.warning("Action: Dispatch cleaning crew to avoid friction fires.")
-        elif incident_code == "FIRE":
-            st.error("🔥 CODE FIRE LOGGED: Friction smoke detected.")
-            st.error("CRITICAL: Evacuate district. Turn on main suppression systems.")
+    if incident_report:
+        # Multilingual Keyword Extraction (English + Hindi/Hinglish)
+        
+        # Checking for Tear/Break keywords (Fata, Phat, Tut, Kata)
+        if any(word in incident_report for word in ["TEAR", "CUT", "RUPTURE", "BROKEN", "FAT", "PHAT", "TUT", "KATA"]):
+            st.error("🚨 CRITICAL ALERT LOGGED: Belt Tear/Rupture detected in report.")
+            st.error("**Action:** Stop belt immediately. Dispatch vulcanizing crew.")
+            
+        # Checking for Spillage/Jam keywords (Gir, Fas, Phas, Ruk, Jam)
+        elif any(word in incident_report for word in ["SPIL", "BLOCK", "OVERFLOW", "JAM", "GIR", "FAS", "PHAS", "RUK"]):
+            st.warning("⚠️ WARNING LOGGED: Material spillage or blockage reported.")
+            st.warning("**Action:** Dispatch cleaning crew to clear idlers and avoid friction fires.")
+            
+        # Checking for Fire/Smoke keywords (Aag, Dhua, Jal)
+        elif any(word in incident_report for word in ["FIRE", "SMOKE", "BURNING", "SPARK", "AAG", "DHUA", "JAL", "DHUAN"]):
+            st.error("🔥 FIRE EMERGENCY LOGGED: Combustion indicators detected.")
+            st.error("**CRITICAL:** Evacuate district. Turn on main suppression systems. Alert DGMS.")
+            
         else:
-            st.info(f"Log received: {incident_code}. Control room notified for verification.")
+            st.info("📝 General log received. Control room notified for verification.")
+            st.write(f"**Recorded Log:** {incident_report}")
 
 # --- TAB 3: MAINTENANCE SCHEDULER ---
 with tab3:
