@@ -93,11 +93,10 @@ if uploaded_file is not None:
     image = Image.open(uploaded_file).convert('RGB')
     st.image(image, caption='Uploaded Belt Photo', use_container_width=True)
     
-    with st.spinner('Analyzing belt condition...'):
+  with st.spinner('Analyzing belt condition...'):
         img = image.resize((224, 224))
         img_array = tf.keras.preprocessing.image.img_to_array(img)
         img_array = tf.expand_dims(img_array, 0)
-        img_array = tf.keras.applications.mobilenet_v2.preprocess_input(img_array)
         
         prediction = model.predict(img_array)[0][0]
         
