@@ -165,7 +165,8 @@ with tab1:
                             st.success("Belt condition healthy. Continue production.")
                             
                 except Exception as e:
-                    st.error("Model Error: Ensure 'conveyorguard_model.h5' is loaded correctly.")ConveyorGuard CAN:
+                    st.error("Model Error: Ensure 'conveyorguard_model.h5' is loaded correctly.")
+              # ConveyorGuard CAN:
 # ✓ Detect anomaly from single photo
 # ✓ Give confidence percentage
 # ✓ Trigger emergency protocols (Tab 2)
