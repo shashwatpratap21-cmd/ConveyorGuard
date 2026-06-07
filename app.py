@@ -121,8 +121,7 @@ tab1, tab2, tab3 = st.tabs(["🚨 AI Vision Inspection", "📝 Manual Override (
 with tab1:
     st.markdown("### Upload Conveyor Belt Image")
     
-    # The expander makes it collapsible, the st.warning gives it the DGMS Yellow Caution color!
-   with st.expander("📋 DGMS Pre-Inspection Safety Protocol", expanded=True):
+    with st.expander("📋 DGMS Pre-Inspection Safety Protocol", expanded=True):
         st.warning("""
         **🟡 CRITICAL UNDERGROUND SAFETY REQUIREMENTS:**
         * **Communication:** Inform the surface control room before beginning your inspection walk.
@@ -131,12 +130,12 @@ with tab1:
         * **Emergency Readiness:** Visually locate the nearest emergency pull-cord before framing your photographs.
         * **Hazard Awareness:** Ensure cap lamps are secured and report any heavy coal dust accumulation near seized rollers immediately.
         """)
+    
     uploaded_file = st.file_uploader("Drag and drop or click to upload", type=["jpg", "png", "jpeg"])
     
     if uploaded_file is not None:
         image = Image.open(uploaded_file)
         
-        # Creates the side-by-side layout
         col_img, col_results = st.columns([1.5, 1])
         
         with col_img:
@@ -147,7 +146,6 @@ with tab1:
             
             if st.button("🔍 Run AI Diagnostics", type="primary"):
                 try:
-                    # Prepare image for the AI model
                     img_resized = image.resize((224, 224))
                     img_array = tf.keras.preprocessing.image.img_to_array(img_resized)
                     img_array = np.expand_dims(img_array, axis=0)
@@ -156,13 +154,11 @@ with tab1:
                         prediction = model.predict(img_array)
                         
                         if prediction[0][0] > 0.5:  
-                            # DGMS RED for Critical Danger
                             st.error("🚨 CRITICAL DAMAGE (94.2% Confidence)")
                             st.caption("⏳ Estimated Time to Failure")
                             st.subheader("IMMEDIATE")
                             st.error("Action: Stop conveyor immediately. Dispatch Vulcanizing team.")
                         else:
-                            # DGMS GREEN for Safe/Healthy
                             st.success("✅ NORMAL (99.2% Confidence)")
                             st.caption("⏳ Estimated Time to Failure")
                             st.subheader("> 6 Months")
