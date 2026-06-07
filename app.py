@@ -4,6 +4,20 @@ import numpy as np
 from PIL import Image
 import os
 
+# Create a structural "Layer box" for the missing math operation
+@tf.keras.utils.register_keras_serializable()
+class TrueDivide(tf.keras.layers.Layer):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        
+    def call(self, *args, **kwargs):
+        inputs = args[0] if args else []
+        if isinstance(inputs, (list, tuple)) and len(inputs) == 2:
+            return inputs[0] / inputs[1]
+        elif len(args) == 2:
+            return args[0] / args[1]
+        return inputs
+
 # 1. Setup the Page
 st.set_page_config(
     page_title="ConveyorGuard", 
@@ -20,12 +34,12 @@ st.write("Upload a photo of the conveyor belt for instant AI analysis.")
 def load_model():
     model_path = os.path.join(os.path.dirname(__file__), 'conveyorguard_model.h5')
     
-    # Bypass the TrueDivide and version bugs by mapping the math operation natively
+    # Load the model and map the missing layer to our custom box
     model = tf.keras.models.load_model(
         model_path, 
         compile=False,
         safe_mode=False,
-        custom_objects={'TrueDivide': tf.math.truediv}
+        custom_objects={'TrueDivide': TrueDivide}
     )
     return model
 
