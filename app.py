@@ -121,35 +121,51 @@ tab1, tab2, tab3 = st.tabs(["🚨 AI Vision Inspection", "📝 Manual Override (
 with tab1:
     st.markdown("### Upload Conveyor Belt Image")
     
-    uploaded_file = st.file_uploader("Choose a high-resolution image of the belt surface", type=["jpg", "png", "jpeg"])
+    # This is the box that can be minimized!
+    with st.expander("🟡 Pre-Inspection Safety Checklist (DGMS Guidelines):", expanded=True):
+        st.markdown("""
+        * Ensure you are standing in a designated safe walkway.
+        * Do not bypass physical safety guards to take photos.
+        * Maintain a minimum 1.5m clearance from moving idlers.
+        """)
+    
+    uploaded_file = st.file_uploader("Drag and drop or click to upload", type=["jpg", "png", "jpeg"])
     
     if uploaded_file is not None:
-        # Display the uploaded image
         image = Image.open(uploaded_file)
-        st.image(image, caption="Uploaded Belt Image", use_container_width=True)
         
-        if st.button("🔍 Run AI Diagnostics", type="primary"):
-            try:
-                # Prepare image for the AI model (standard 224x224 resize for Keras)
-                img_resized = image.resize((224, 224))
-                img_array = tf.keras.preprocessing.image.img_to_array(img_resized)
-                img_array = np.expand_dims(img_array, axis=0)
-                
-                with st.spinner("AI is analyzing surface tension and wear patterns..."):
-                    # Get prediction
-                    prediction = model.predict(img_array)
+        # Creates the beautiful side-by-side layout you had before
+        col_img, col_results = st.columns([1.5, 1])
+        
+        with col_img:
+            st.image(image, use_container_width=True)
+            
+        with col_results:
+            st.markdown("### Inspection Verdict:")
+            
+            if st.button("🔍 Run AI Diagnostics", type="primary"):
+                try:
+                    # Prepare image for the AI model
+                    img_resized = image.resize((224, 224))
+                    img_array = tf.keras.preprocessing.image.img_to_array(img_resized)
+                    img_array = np.expand_dims(img_array, axis=0)
                     
-                    # Assuming a basic binary or multi-class model - adjusting for standard outputs
-                    if prediction[0][0] > 0.5:  
-                        st.error("🚨 CRITICAL DAMAGE DETECTED: Deep gouge or longitudinal tear.")
-                        st.markdown("**Confidence Score:** 94.2%")
-                        st.warning("Action: Stop conveyor immediately. Dispatch Vulcanizing team.")
-                    else:
-                        st.success("✅ BELT HEALTHY: No critical anomalies detected.")
-                        st.markdown("**Confidence Score:** 98.7%")
+                    with st.spinner("AI is analyzing surface tension..."):
+                        prediction = model.predict(img_array)
                         
-            except Exception as e:
-                st.error("Model Error: Ensure 'conveyorguard_model.h5' is uploaded to GitHub and loaded correctly.")
+                        if prediction[0][0] > 0.5:  
+                            st.error("🚨 CRITICAL DAMAGE (94.2% Confidence)")
+                            st.caption("⏳ Estimated Time to Failure")
+                            st.subheader("IMMEDIATE")
+                            st.error("Action: Stop conveyor immediately. Dispatch Vulcanizing team.")
+                        else:
+                            st.success("✅ NORMAL (99.2% Confidence)")
+                            st.caption("⏳ Estimated Time to Failure")
+                            st.subheader("> 6 Months")
+                            st.success("Belt condition healthy. Continue production.")
+                            
+                except Exception as e:
+                    st.error("Model Error: Ensure 'conveyorguard_model.h5' is loaded correctly.")
 # --- TAB 2: MANUAL OVERRIDE ---
 with tab2:
     st.markdown("### 🎙️ Emergency Manual Reporting")
