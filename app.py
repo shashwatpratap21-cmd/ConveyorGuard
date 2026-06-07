@@ -166,7 +166,7 @@ with tab1:
                             
                 except Exception as e:
                     st.error("Model Error: Ensure 'conveyorguard_model.h5' is loaded correctly.")ConveyorGuard CAN:
-✓ Detect anomaly from single photo
+# ✓ Detect anomaly from single photo
 ✓ Give confidence percentage
 ✓ Trigger emergency protocols (Tab 2)
 ✓ Calculate production loss estimate
