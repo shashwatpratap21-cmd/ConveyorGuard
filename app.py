@@ -100,7 +100,7 @@ with tab1:
     st.markdown("### Upload Conveyor Belt Image")
     uploaded_file = st.file_uploader("Drag and drop or click to upload", type=["jpg", "png", "jpeg"])
 
-    if uploaded_file is not None:
+if uploaded_file is not None:
         image = Image.open(uploaded_file).convert('RGB')
         
         # UI Upgrade: Image left side, Results right side
