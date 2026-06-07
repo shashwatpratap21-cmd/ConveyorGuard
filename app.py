@@ -180,10 +180,6 @@ with tab1:
 # ✗ Monitor belt continuously
 # ✗ Replace physical inspection entirely
 
-Knowing your boundaries = 
-engineering maturity =
-what separates good engineers
-from overconfident ones
 # --- TAB 2: MANUAL OVERRIDE ---
 with tab2:
     st.markdown("### 🎙️ Emergency Manual Reporting")
