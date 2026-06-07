@@ -90,7 +90,7 @@ uploaded_file = st.file_uploader(
 )
 
 if uploaded_file is not None:
-    image = Image.open(uploaded_file)
+    image = Image.open(uploaded_file).convert('RGB')
     st.image(image, caption='Uploaded Belt Photo', use_container_width=True)
     
     with st.spinner('Analyzing belt condition...'):
