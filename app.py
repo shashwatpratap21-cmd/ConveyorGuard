@@ -204,7 +204,7 @@ with tab2:
     if st.session_state.saved_report:
         active_report = st.session_state.saved_report
         
-        # 1. Belt Tear (WITH SMS)
+        # 1. Belt Tear (WITH HIERARCHY SMS)
         if any(word in active_report for word in ["TEAR", "CUT", "RUPTURE", "BROKEN", "FAT", "TOOT", "FATA", "TUTA"]):
             if lang == "English":
                 st.error("🚨 CRITICAL ALERT LOGGED: Belt Tear/Rupture detected.")
@@ -214,13 +214,25 @@ with tab2:
                 st.error("**कार्रवाई (Action):** तुरंत बेल्ट रोकें। मरम्मत टीम (Vulcanizing crew) को भेजें।")
             
             st.markdown("---")
-            if st.button("📱 Dispatch SMS Alert to Shift Engineer", key="sms_tear"):
-                with st.spinner("Pinging mobile network..."):
+            st.markdown("### 📱 Emergency Communication Network" if lang == "English" else "### 📱 आपातकालीन संचार नेटवर्क")
+            st.info("""
+            **Alert Routing based on Incident Severity:**
+            * **Shift Engineer:** (Mandatory for all logs)
+            * **Mine Manager:** (Triggered if status is CRITICAL)
+            * **DGMS Control Room:** (Triggered if FIRE/INUNDATION)
+            """ if lang == "English" else """
+            **घटना की गंभीरता के आधार पर अलर्ट रूटिंग:**
+            * **शिफ्ट इंजीनियर:** (सभी लॉग के लिए अनिवार्य)
+            * **खदान प्रबंधक:** (गंभीर स्थिति में ट्रिगर)
+            * **DGMS कंट्रोल रूम:** (आग/बाढ़ की स्थिति में ट्रिगर)
+            """)
+            if st.button("🚨 Dispatch Alert Network" if lang == "English" else "🚨 अलर्ट नेटवर्क भेजें", key="sms_tear", type="primary"):
+                with st.spinner("Routing encrypted alerts via Twilio..." if lang == "English" else "Twilio के माध्यम से अलर्ट भेजा जा रहा है..."):
                     success = send_emergency_sms("Critical Belt Rupture", active_report)
                     if success:
-                        st.success("✅ SMS Alert successfully delivered to Shift Engineer's mobile.")
+                        st.success("✅ Statutory SMS Alerts Sent Successfully!" if lang == "English" else "✅ वैधानिक SMS अलर्ट सफलतापूर्वक भेज दिए गए!")
                 
-        # 2. Fire/Smoke (WITH SMS)
+        # 2. Fire/Smoke (WITH HIERARCHY SMS)
         elif any(word in active_report for word in ["FIRE", "SMOKE", "BURNING", "SPARK", "AAG", "DHUAN", "JALA", "SULAG"]):
             if lang == "English":
                 st.error("🔥 FIRE EMERGENCY LOGGED: Combustion indicators detected.")
@@ -230,11 +242,23 @@ with tab2:
                 st.error("**खतरा (CRITICAL):** तुरंत खदान खाली करें। वाटर स्प्रिंकलर (Water sprinklers) चालू करें। DGMS को अलर्ट करें।")
             
             st.markdown("---")
-            if st.button("📱 Dispatch SMS Alert to Rescue Team", key="sms_fire"):
-                with st.spinner("Pinging mobile network..."):
+            st.markdown("### 📱 Emergency Communication Network" if lang == "English" else "### 📱 आपातकालीन संचार नेटवर्क")
+            st.info("""
+            **Alert Routing based on Incident Severity:**
+            * **Shift Engineer:** (Mandatory for all logs)
+            * **Mine Manager:** (Triggered if status is CRITICAL)
+            * **DGMS Control Room:** (Triggered if FIRE/INUNDATION)
+            """ if lang == "English" else """
+            **घटना की गंभीरता के आधार पर अलर्ट रूटिंग:**
+            * **शिफ्ट इंजीनियर:** (सभी लॉग के लिए अनिवार्य)
+            * **खदान प्रबंधक:** (गंभीर स्थिति में ट्रिगर)
+            * **DGMS कंट्रोल रूम:** (आग/बाढ़ की स्थिति में ट्रिगर)
+            """)
+            if st.button("🚨 Dispatch Alert Network" if lang == "English" else "🚨 अलर्ट नेटवर्क भेजें", key="sms_fire", type="primary"):
+                with st.spinner("Routing encrypted alerts via Twilio..." if lang == "English" else "Twilio के माध्यम से अलर्ट भेजा जा रहा है..."):
                     success = send_emergency_sms("Underground Fire Detected", active_report)
                     if success:
-                        st.success("✅ SMS Alert successfully delivered to Rescue Team's mobile.")
+                        st.success("✅ Statutory SMS Alerts Sent Successfully!" if lang == "English" else "✅ वैधानिक SMS अलर्ट सफलतापूर्वक भेज दिए गए!")
                 
         # 3. Spillage/Blockage
         elif any(word in active_report for word in ["SPIL", "BLOCK", "OVERFLOW", "JAM", "GIRA", "BHAR", "RUKA", "BAND"]):
@@ -245,7 +269,7 @@ with tab2:
                 st.warning("⚠️ चेतावनी: कोयला गिरने या बेल्ट जाम होने की सूचना है।")
                 st.warning("**कार्रवाई (Action):** सफाई टीम को भेजें ताकि घर्षण (friction) से आग न लगे।")
 
-        # 4. Water/Flooding
+        # 4. Water/Flooding (WITH HIERARCHY SMS - Added because Inundation is DGMS Critical)
         elif any(word in active_report for word in ["WATER", "FLOOD", "INUND", "LEAK", "PAANI", "BAARISH", "RISSA"]):
             if lang == "English":
                 st.error("🌊 INUNDATION RISK LOGGED: Water flooding reported.")
@@ -253,13 +277,31 @@ with tab2:
             else:
                 st.error("🌊 बाढ़ का खतरा: खदान में पानी भरने की सूचना है।")
                 st.error("**कार्रवाई (Action):** तुरंत बाहर निकलें। मुख्य वाटर पंप चालू करें। खदान प्रबंधक को अलर्ट करें।")
+            
+            st.markdown("---")
+            st.markdown("### 📱 Emergency Communication Network" if lang == "English" else "### 📱 आपातकालीन संचार नेटवर्क")
+            st.info("""
+            **Alert Routing based on Incident Severity:**
+            * **Shift Engineer:** (Mandatory for all logs)
+            * **Mine Manager:** (Triggered if status is CRITICAL)
+            * **DGMS Control Room:** (Triggered if FIRE/INUNDATION)
+            """ if lang == "English" else """
+            **घटना की गंभीरता के आधार पर अलर्ट रूटिंग:**
+            * **शिफ्ट इंजीनियर:** (सभी लॉग के लिए अनिवार्य)
+            * **खदान प्रबंधक:** (गंभीर स्थिति में ट्रिगर)
+            * **DGMS कंट्रोल रूम:** (आग/बाढ़ की स्थिति में ट्रिगर)
+            """)
+            if st.button("🚨 Dispatch Alert Network" if lang == "English" else "🚨 अलर्ट नेटवर्क भेजें", key="sms_water", type="primary"):
+                with st.spinner("Routing encrypted alerts via Twilio..." if lang == "English" else "Twilio के माध्यम से अलर्ट भेजा जा रहा है..."):
+                    success = send_emergency_sms("Critical Inundation Risk", active_report)
+                    if success:
+                        st.success("✅ Statutory SMS Alerts Sent Successfully!" if lang == "English" else "✅ वैधानिक SMS अलर्ट सफलतापूर्वक भेज दिए गए!")
                 
         else:
             if lang == "English":
                 st.info("📝 General log received. Control room notified for verification.")
             else:
                 st.info("📝 रिपोर्ट दर्ज कर ली गई है। वेरिफिकेशन के लिए कंट्रोल रूम को सूचित कर दिया गया है।")
-
 # --- TAB 3: MAINTENANCE SCHEDULER ---
 with tab3:
     st.markdown("### ⚙️ Time-Based Preventive Maintenance")
