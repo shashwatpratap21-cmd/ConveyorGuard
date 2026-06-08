@@ -371,10 +371,10 @@ with tab2:
         )
 # --- TAB 3: MAINTENANCE SCHEDULER ---
 with tab3:
-    st.markdown("### 🛠️ Predictive Maintenance & Scheduling")
-    st.info("Track statutory inspections and vulcanizing schedules based on DGMS maintenance guidelines.")
+    st.markdown("### 🛠️ Predictive Maintenance & Statutory Compliance")
+    st.info("Track statutory inspections, safety risks, and vulcanizing schedules.")
     
-    # 1. Top Level Metrics (Dashboard Style)
+    # 1. Top Level Metrics
     col1, col2, col3 = st.columns(3)
     with col1:
         st.metric(label="Next Statutory Walkthrough", value="2 Days", delta="-1 day (Urgent)", delta_color="inverse")
@@ -385,7 +385,28 @@ with tab3:
         
     st.markdown("---")
     
-    # 2. Maintenance Logging Form
+    # 2. Mine Manager's Overview (Compliance & Safety)
+    col_comp, col_risk = st.columns(2)
+    
+    with col_comp:
+        st.markdown("#### 📋 DGMS Compliance Tracker")
+        st.markdown("Routine checks per Circular No. 3 of 2020:")
+        # Using checkboxes that default to checked/unchecked to show status
+        st.checkbox("Weekly Belt Inspection (Form-4)", value=True, disabled=True)
+        st.checkbox("Emergency Pull Cord Test", value=True, disabled=True)
+        st.checkbox("Fire Extinguisher & Sprinkler Check", value=False, disabled=True) # Unchecked to show action needed!
+        st.checkbox("Walkthrough Record Updated", value=True, disabled=True)
+
+    with col_risk:
+        st.markdown("#### ⚠️ Active Safety Risk Panel")
+        st.markdown("Current operational hazards:")
+        st.error("**🔥 Fire Risk: HIGH** (Coal dust accumulation noted near tail pulley)")
+        st.warning("**👷 Personnel Risk: MEDIUM** (Clearance zone restricted in Sector 4)")
+        st.success("**⚙️ Belt Failure Risk: LOW** (No immediate structural tearing detected)")
+        
+    st.markdown("---")
+    
+    # 3. Maintenance Logging Form
     st.markdown("#### 📅 Schedule Repair / Vulcanizing")
     
     with st.form("maintenance_form"):
@@ -394,6 +415,7 @@ with tab3:
             "Idler/Roller Replacement", 
             "Drive Motor Alignment", 
             "Tail Pulley Cleaning",
+            "Fire Extinguisher Replacement",
             "General Statutory Inspection"
         ])
         
