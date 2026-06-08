@@ -132,6 +132,15 @@ with tab1:
         * **Hazard Awareness:** Ensure cap lamps are secured and report any heavy coal dust accumulation near seized rollers immediately.
         """)
     
+    # --- NEW UPGRADE: The Calibration Slider ---
+    st.markdown("### 🎛️ AI Sensitivity Calibration")
+    st.info("Field adjustment: Increase threshold if heavy coal loads or dust are causing false alarms.")
+    confidence_threshold = st.slider(
+        "Critical Damage Confidence Threshold",
+        min_value=0.50, max_value=0.99, value=0.90, step=0.01
+    )
+    st.markdown("---")
+    
     uploaded_file = st.file_uploader("Drag and drop or click to upload", type=["jpg", "png", "jpeg"])
     
     if uploaded_file is not None:
@@ -150,15 +159,13 @@ with tab1:
                 img_array = tf.keras.preprocessing.image.img_to_array(img_resized)
                 img_array = np.expand_dims(img_array, axis=0)
                 
-                # NOTE: If your model was trained on scaled images (0 to 1), uncomment the line below!
-                # img_array = img_array / 255.0
-                
                 with st.spinner("AI is analyzing surface tension..."):
                     prediction = model.predict(img_array)
+                    ai_confidence = prediction[0][0]
                     
-                    # FIX: Threshold bumped to 0.85 to ignore rocks and only flag severe damage
-                    if prediction[0][0] > 0.85:  
-                        st.error("🚨 CRITICAL DAMAGE (94.2% Confidence)")
+                    # FIX: Now the AI obeys your slider on the screen!
+                    if ai_confidence > confidence_threshold:  
+                        st.error(f"🚨 CRITICAL DAMAGE ({ai_confidence * 100:.1f}% Confidence)")
                         st.error("**Action:** Stop conveyor immediately. Dispatch Vulcanizing team.")
                         st.markdown("---")
                         st.info("""
@@ -169,8 +176,8 @@ with tab1:
                         * Report to DGMS if belt is replaced.
                         """)
                     else:
-                        st.success("✅ NORMAL (99.2% Confidence)")
-                        st.success("Belt condition healthy. Continue production.")
+                        st.success(f"✅ NORMAL / HEALTHY LOAD")
+                        st.success(f"AI Damage Probability: {ai_confidence * 100:.1f}%. Below safety threshold.")
                         st.markdown("---")
                         st.info("""
                         **📋 Routine Recommendation:**
@@ -180,7 +187,7 @@ with tab1:
                         """)
                         
             except Exception as e:
-                st.error("Model Error: Ensure 'conveyorguard_model.h5' is loaded correctly.")
+                st.error(f"Model Error: {e}")
 
 # --- TAB 2: MANUAL OVERRIDE ---
 with tab2:
