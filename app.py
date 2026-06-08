@@ -9,22 +9,22 @@ from twilio.rest import Client
 # --- TWILIO SMS CONFIGURATION ---
 # =========================================================================
 def send_emergency_sms(alert_type, details):
-      TWILIO_SID = st.secrets["TWILIO_SID"]
-      TWILIO_TOKEN = st.secrets["TWILIO_TOKEN"]
-      TWILIO_NUMBER = "+13367042789" 
-      TARGET_PHONE = "+918467068023" 
+    TWILIO_SID = st.secrets["TWILIO_SID"]
+    TWILIO_TOKEN = st.secrets["TWILIO_TOKEN"]
+    TWILIO_NUMBER = "+13367042789"
+    TARGET_PHONE = "+918467068023"
 
     try:
-        client = Client(TWILIO_SID, TWILIO_TOKEN)
-        message = client.messages.create(
-            body=f"🚨 CONVEYORGUARD ALERT: {alert_type}\nLocation: Sijua Colliery\nDetails: {details}\nAction Required Immediately.",
-            from_=TWILIO_NUMBER,
-            to=TARGET_PHONE
-        )
-        return True
-    except Exception as e:
-        st.error(f"SMS Delivery Failed: {e}")
-        return False
+        client = Client(TWILIO_SID, TWILIO_TOKEN)
+        message = client.messages.create(
+            body=f"🚨 CONVEYORGUARD ALERT: {alert_type}\nLocation: Sijua Colliery\nDetails: {details}\nAction Required Immediately.",
+            from_=TWILIO_NUMBER,
+            to=TARGET_PHONE
+        )
+        return True
+    except Exception as e:
+        st.error(f"SMS Delivery Failed: {e}")
+        return False
 
 # =========================================================================
 # --- Keras Version Mismatch Hacks ---
