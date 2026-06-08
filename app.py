@@ -76,6 +76,84 @@ except:
 tab1, tab2, tab3 = st.tabs(["🚨 AI Vision Inspection", "📝 Manual Override", "🛠️ Maintenance Scheduler"])
 
 # --- TAB 1: AI INSPECTION ---
+import streamlit as st
+import tensorflow as tf
+import numpy as np
+from PIL import Image
+import os
+from twilio.rest import Client
+
+# =========================================================================
+# --- TWILIO SMS CONFIGURATION ---
+# =========================================================================
+def send_emergency_sms(alert_type, details):
+    TWILIO_SID = st.secrets["TWILIO_SID"]
+    TWILIO_TOKEN = st.secrets["TWILIO_TOKEN"]
+    TWILIO_NUMBER = "+13367042789" 
+    TARGET_PHONE = "+918467068023" 
+
+    try:
+        client = Client(TWILIO_SID, TWILIO_TOKEN)
+        message = client.messages.create(
+            body=f"🚨 CONVEYORGUARD ALERT: {alert_type}\nLocation: Sijua Colliery\nDetails: {details}\nAction Required Immediately.",
+            from_=TWILIO_NUMBER,
+            to=TARGET_PHONE
+        )
+        return True
+    except Exception as e:
+        st.error(f"SMS Delivery Failed: {e}")
+        return False
+
+# =========================================================================
+# --- Keras Version Mismatch Hacks ---
+# =========================================================================
+@tf.keras.utils.register_keras_serializable()
+class TrueDivide(tf.keras.layers.Layer):
+    def call(self, inputs, y=127.5):
+        if isinstance(inputs, (list, tuple)) and len(inputs) == 2:
+            return inputs[0] / inputs[1]
+        return inputs / y
+
+@tf.keras.utils.register_keras_serializable()
+class Subtract(tf.keras.layers.Layer):
+    def call(self, inputs, y=1.0):
+        if isinstance(inputs, (list, tuple)) and len(inputs) == 2:
+            return inputs[0] - inputs[1]
+        return inputs - y
+
+@tf.keras.utils.register_keras_serializable()
+class SafeDense(tf.keras.layers.Dense):
+    def __init__(self, *args, **kwargs):
+        kwargs.pop('quantization_config', None)
+        super().__init__(*args, **kwargs)
+
+# =========================================================================
+# --- App Configuration ---
+# =========================================================================
+st.set_page_config(page_title="ConveyorGuard", page_icon="⛏️", layout="wide")
+
+st.title("⛏️ ConveyorGuard Dashboard")
+st.subheader("AI-Powered Inspection & Safety Management System")
+
+# --- MODEL LOADING ---
+@st.cache_resource
+def load_model():
+    model_path = os.path.join(os.path.dirname(__file__), 'conveyorguard_model.h5')
+    return tf.keras.models.load_model(
+        model_path, 
+        compile=False,
+        custom_objects={'TrueDivide': TrueDivide, 'Subtract': Subtract, 'Dense': SafeDense}
+    )
+
+try:
+    model = load_model()
+except:
+    st.warning("Model file not found.")
+
+# --- TABS LAYOUT ---
+tab1, tab2, tab3 = st.tabs(["🚨 AI Vision Inspection", "📝 Manual Override", "🛠️ Maintenance Scheduler"])
+
+# --- TAB 1: AI INSPECTION ---
 with tab1:
     st.markdown("### 🎛️ AI Sensitivity Calibration")
     confidence_threshold = st.slider("Critical Damage Confidence Threshold", 0.10, 0.99, 0.50, 0.01)
@@ -101,7 +179,6 @@ with tab1:
                     st.error(f"🚨 CRITICAL DAMAGE ({prediction * 100:.1f}% Confidence)")
                 else:
                     st.success(f"✅ NORMAL ({prediction * 100:.1f}% Damage Prob.)")
-                    
 # --- TAB 2: MANUAL OVERRIDE ---
 with tab2:
     st.markdown("### 🎙️ Emergency Manual Reporting")
