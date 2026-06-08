@@ -306,10 +306,14 @@ with tab2:
         st.markdown("---")
         st.markdown("### 📥 Statutory Record Management" if lang == "English" else "### 📥 वैधानिक रिकॉर्ड प्रबंधन")
         
-        # Generate a quick CSV format of the report
         import datetime
         current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        report_csv = f"Timestamp,Incident_Description,Status\n{current_time},{active_report},ACTION_REQUIRED"
+        
+        # FIX: Clean the report text by replacing newlines with spaces so it doesn't break the CSV format
+        clean_report = active_report.replace('\n', ' ').replace('\r', '')
+        
+        # Build the CSV string
+        report_csv = f"Timestamp,Incident_Description,Status\n{current_time},{clean_report},ACTION_REQUIRED"
         
         st.download_button(
             label="📄 Download Shift Report (CSV)" if lang == "English" else "📄 शिफ्ट रिपोर्ट डाउनलोड करें (CSV)",
