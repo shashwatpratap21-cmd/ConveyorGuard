@@ -159,11 +159,13 @@ with tab1:
                 img_array = tf.keras.preprocessing.image.img_to_array(img_resized)
                 img_array = np.expand_dims(img_array, axis=0)
                 
+                # FIX: Uncommented this scaling line to prevent the 100% confidence explosion
+                img_array = img_array / 255.0
+                
                 with st.spinner("AI is analyzing surface tension..."):
                     prediction = model.predict(img_array)
                     ai_confidence = prediction[0][0]
                     
-                    # FIX: Now the AI obeys your slider on the screen!
                     if ai_confidence > confidence_threshold:  
                         st.error(f"🚨 CRITICAL DAMAGE ({ai_confidence * 100:.1f}% Confidence)")
                         st.error("**Action:** Stop conveyor immediately. Dispatch Vulcanizing team.")
