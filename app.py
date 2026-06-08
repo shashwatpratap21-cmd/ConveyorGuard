@@ -3,182 +3,56 @@ import tensorflow as tf
 import numpy as np
 from PIL import Image
 import os
-from twilio.rest import Client
 
-# =========================================================================
-# --- TWILIO SMS CONFIGURATION ---
-# =========================================================================
-def send_emergency_sms(alert_type, details):
-    TWILIO_SID = st.secrets["TWILIO_SID"]
-    TWILIO_TOKEN = st.secrets["TWILIO_TOKEN"]
-    TWILIO_NUMBER = "+13367042789" 
-    TARGET_PHONE = "+918467068023" 
-
-    try:
-        client = Client(TWILIO_SID, TWILIO_TOKEN)
-        message = client.messages.create(
-            body=f"🚨 CONVEYORGUARD ALERT: {alert_type}\nLocation: Sijua Colliery\nDetails: {details}\nAction Required Immediately.",
-            from_=TWILIO_NUMBER,
-            to=TARGET_PHONE
-        )
-        return True
-    except Exception as e:
-        st.error(f"SMS Delivery Failed: {e}")
-        return False
-
-# =========================================================================
-# --- Keras Version Mismatch Hacks ---
-# =========================================================================
-@tf.keras.utils.register_keras_serializable()
-class TrueDivide(tf.keras.layers.Layer):
-    def call(self, inputs, y=127.5):
-        if isinstance(inputs, (list, tuple)) and len(inputs) == 2:
-            return inputs[0] / inputs[1]
-        return inputs / y
-
-@tf.keras.utils.register_keras_serializable()
-class Subtract(tf.keras.layers.Layer):
-    def call(self, inputs, y=1.0):
-        if isinstance(inputs, (list, tuple)) and len(inputs) == 2:
-            return inputs[0] - inputs[1]
-        return inputs - y
-
-@tf.keras.utils.register_keras_serializable()
-class SafeDense(tf.keras.layers.Dense):
-    def __init__(self, *args, **kwargs):
-        kwargs.pop('quantization_config', None)
-        super().__init__(*args, **kwargs)
-
-# =========================================================================
-# --- App Configuration ---
-# =========================================================================
+# --- PAGE CONFIG ---
 st.set_page_config(page_title="ConveyorGuard", page_icon="⛏️", layout="wide")
 
-st.title("⛏️ ConveyorGuard Dashboard")
-st.subheader("AI-Powered Inspection & Safety Management System")
+# --- SIDEBAR: Calculator ---
+st.sidebar.header("📉 Economic Impact Calculator")
+capacity = st.sidebar.number_input("Conveyor Capacity (TPH)", value=600)
+coal_price = st.sidebar.number_input("Coal Price (₹/t)", value=2200)
+st.sidebar.error(f"🚨 Potential Hourly Loss: ₹ {(capacity * coal_price) / 100000:.2f} Lakh")
 
 # --- MODEL LOADING ---
 @st.cache_resource
 def load_model():
-    model_path = os.path.join(os.path.dirname(__file__), 'conveyorguard_model.h5')
-    return tf.keras.models.load_model(
-        model_path, 
-        compile=False,
-        custom_objects={'TrueDivide': TrueDivide, 'Subtract': Subtract, 'Dense': SafeDense}
-    )
+    # Ensure 'conveyorguard_model.h5' is in the same folder
+    return tf.keras.models.load_model('conveyorguard_model.h5', compile=False)
 
 try:
     model = load_model()
-except:
-    st.warning("Model file not found.")
-
-# --- TABS LAYOUT ---
-tab1, tab2, tab3 = st.tabs(["🚨 AI Vision Inspection", "📝 Manual Override", "🛠️ Maintenance Scheduler"])
-
-# --- TAB 1: AI INSPECTION ---
-import streamlit as st
-import tensorflow as tf
-import numpy as np
-from PIL import Image
-import os
-from twilio.rest import Client
-
-# =========================================================================
-# --- TWILIO SMS CONFIGURATION ---
-# =========================================================================
-def send_emergency_sms(alert_type, details):
-    TWILIO_SID = st.secrets["TWILIO_SID"]
-    TWILIO_TOKEN = st.secrets["TWILIO_TOKEN"]
-    TWILIO_NUMBER = "+13367042789" 
-    TARGET_PHONE = "+918467068023" 
-
-    try:
-        client = Client(TWILIO_SID, TWILIO_TOKEN)
-        message = client.messages.create(
-            body=f"🚨 CONVEYORGUARD ALERT: {alert_type}\nLocation: Sijua Colliery\nDetails: {details}\nAction Required Immediately.",
-            from_=TWILIO_NUMBER,
-            to=TARGET_PHONE
-        )
-        return True
-    except Exception as e:
-        st.error(f"SMS Delivery Failed: {e}")
-        return False
-
-# =========================================================================
-# --- Keras Version Mismatch Hacks ---
-# =========================================================================
-@tf.keras.utils.register_keras_serializable()
-class TrueDivide(tf.keras.layers.Layer):
-    def call(self, inputs, y=127.5):
-        if isinstance(inputs, (list, tuple)) and len(inputs) == 2:
-            return inputs[0] / inputs[1]
-        return inputs / y
-
-@tf.keras.utils.register_keras_serializable()
-class Subtract(tf.keras.layers.Layer):
-    def call(self, inputs, y=1.0):
-        if isinstance(inputs, (list, tuple)) and len(inputs) == 2:
-            return inputs[0] - inputs[1]
-        return inputs - y
-
-@tf.keras.utils.register_keras_serializable()
-class SafeDense(tf.keras.layers.Dense):
-    def __init__(self, *args, **kwargs):
-        kwargs.pop('quantization_config', None)
-        super().__init__(*args, **kwargs)
-
-# =========================================================================
-# --- App Configuration ---
-# =========================================================================
-st.set_page_config(page_title="ConveyorGuard", page_icon="⛏️", layout="wide")
+except Exception as e:
+    st.sidebar.warning(f"Model file not found: {e}")
 
 st.title("⛏️ ConveyorGuard Dashboard")
-st.subheader("AI-Powered Inspection & Safety Management System")
 
-# --- MODEL LOADING ---
-@st.cache_resource
-def load_model():
-    model_path = os.path.join(os.path.dirname(__file__), 'conveyorguard_model.h5')
-    return tf.keras.models.load_model(
-        model_path, 
-        compile=False,
-        custom_objects={'TrueDivide': TrueDivide, 'Subtract': Subtract, 'Dense': SafeDense}
-    )
+# --- TABS ---
+tab1, tab2, tab3 = st.tabs(["🚨 AI Inspection", "📝 Manual", "🛠️ Scheduler"])
 
-try:
-    model = load_model()
-except:
-    st.warning("Model file not found.")
-
-# --- TABS LAYOUT ---
-tab1, tab2, tab3 = st.tabs(["🚨 AI Vision Inspection", "📝 Manual Override", "🛠️ Maintenance Scheduler"])
-
-# --- TAB 1: AI INSPECTION ---
 with tab1:
     st.markdown("### 🎛️ AI Sensitivity Calibration")
-    confidence_threshold = st.slider("Critical Damage Confidence Threshold", 0.10, 0.99, 0.50, 0.01)
+    confidence_threshold = st.slider("Threshold", 0.10, 0.99, 0.75, 0.01)
     
     uploaded_file = st.file_uploader("Upload Conveyor Image", type=["jpg", "png", "jpeg"])
     
     if uploaded_file is not None:
-        image = Image.open(uploaded_file)
-        
-        # FIX: Ensure 3-channel RGB to prevent '4 vs 3' channel errors
-        if image.mode != 'RGB':
-            image = image.convert('RGB')
-            
+        image = Image.open(uploaded_file).convert('RGB')
         st.image(image, use_container_width=True)
         
+        # Preprocessing
         img_resized = image.resize((224, 224))
-        img_array = np.expand_dims(tf.keras.preprocessing.image.img_to_array(img_resized) / 255.0, axis=0)
+        img_array = np.expand_dims(np.array(img_resized) / 255.0, axis=0)
         
-        if st.button("Run Inspection"):
-            with st.spinner("Analyzing..."):
-                prediction = model.predict(img_array)[0][0]
-                if prediction > confidence_threshold:
-                    st.error(f"🚨 CRITICAL DAMAGE ({prediction * 100:.1f}% Confidence)")
-                else:
-                    st.success(f"✅ NORMAL ({prediction * 100:.1f}% Damage Prob.)")
+        # INSTANT ANALYSIS
+        with st.spinner("Analyzing belt health..."):
+            prediction = model.predict(img_array)[0][0]
+            
+            if prediction > confidence_threshold:
+                st.error(f"🚨 CRITICAL DAMAGE (Confidence: {prediction*100:.1f}%)")
+            else:
+                st.success(f"✅ NORMAL / HEALTHY (Damage Probability: {prediction*100:.1f}%)")
+
+# Place your Tab 2 and Tab 3 logic below here
 # --- TAB 2: MANUAL OVERRIDE ---
 with tab2:
     st.markdown("### 🎙️ Emergency Manual Reporting")
