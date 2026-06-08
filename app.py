@@ -371,20 +371,46 @@ with tab2:
         )
 # --- TAB 3: MAINTENANCE SCHEDULER ---
 with tab3:
-    st.markdown("### ⚙️ Time-Based Preventive Maintenance")
+    st.markdown("### 🛠️ Predictive Maintenance & Scheduling")
+    st.info("Track statutory inspections and vulcanizing schedules based on DGMS maintenance guidelines.")
     
-    col3, col4 = st.columns(2)
+    # 1. Top Level Metrics (Dashboard Style)
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric(label="Next Statutory Walkthrough", value="2 Days", delta="-1 day (Urgent)", delta_color="inverse")
+    with col2:
+        st.metric(label="Idler Greasing Status", value="Overdue", delta="Action Req", delta_color="inverse")
     with col3:
-        belt_type = st.selectbox("Select Conveyor Belt Type", ["PVC Fire-Resistant (Underground)", "Steel Cord", "Nylon/Fabric Belt"])
-    with col4:
-        machine_age = st.number_input("Operating Time (Months)", min_value=1, max_value=120, value=6)
-    
+        st.metric(label="Belt Tension & Alignment", value="Normal", delta="14 Days left", delta_color="normal")
+        
     st.markdown("---")
-    st.subheader(f"📋 Maintenance Schedule for {machine_age} Months Old {belt_type}")
     
-    if machine_age <= 6:
-        st.info("**🔵 Routine Checks (0-6 Months):**\n* Visual inspection of belt tracking.\n* Check for unusual noise from idlers.")
-    elif 6 < machine_age <= 24:
-        st.warning("**🟠 Mid-Term Maintenance (6-24 Months):**\n* Lubricate all tail and drive pulleys.\n* Ultrasonic thickness test on belt cover.")
-    else:
-        st.error("**🔴 Critical Overhaul (>24 Months):**\n* Full structural audit.\n* Replace seized idlers.\n* Test all emergency pull-cords.")
+    # 2. Maintenance Logging Form
+    st.markdown("#### 📅 Schedule Repair / Vulcanizing")
+    
+    with st.form("maintenance_form"):
+        task = st.selectbox("Select Maintenance Task:", [
+            "Hot Vulcanizing (Belt Splicing)", 
+            "Idler/Roller Replacement", 
+            "Drive Motor Alignment", 
+            "Tail Pulley Cleaning",
+            "General Statutory Inspection"
+        ])
+        
+        col_date, col_team = st.columns(2)
+        with col_date:
+            scheduled_date = st.date_input("Scheduled Date")
+        with col_team:
+            assigned_to = st.text_input("Assigned Team / Contractor")
+            
+        comments = st.text_area("Additional Engineer Comments:")
+        
+        # The Submit Button
+        submitted = st.form_submit_button("💾 Log Maintenance Task", type="primary")
+        
+        if submitted:
+            if assigned_to == "":
+                st.error("Please assign a team before logging the task.")
+            else:
+                st.success(f"✅ {task} successfully scheduled for {scheduled_date}.")
+                st.info(f"Notification sent to: {assigned_to}")
