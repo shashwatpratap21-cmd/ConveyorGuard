@@ -302,24 +302,72 @@ with tab2:
                 st.info("📝 General log received. Control room notified for verification.")
             else:
                 st.info("📝 रिपोर्ट दर्ज कर ली गई है। वेरिफिकेशन के लिए कंट्रोल रूम को सूचित कर दिया गया है।")
-        # --- STATUTORY RECORD EXPORT ---
+        # --- STATUTORY RECORD EXPORT (PDF UPGRADE) ---
         st.markdown("---")
         st.markdown("### 📥 Statutory Record Management" if lang == "English" else "### 📥 वैधानिक रिकॉर्ड प्रबंधन")
         
         import datetime
+        from fpdf import FPDF
+        
         current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
-        # FIX: Clean the report text by replacing newlines with spaces so it doesn't break the CSV format
-        clean_report = active_report.replace('\n', ' ').replace('\r', '')
+        # 1. Initialize the PDF Document
+        pdf = FPDF()
+        pdf.add_page()
         
-        # Build the CSV string
-        report_csv = f"Timestamp,Incident_Description,Status\n{current_time},{clean_report},ACTION_REQUIRED"
+        # 2. Add Official Headers
+        pdf.set_font("Arial", "B", 16)
+        pdf.cell(200, 10, "CONVEYORGUARD - DGMS STATUTORY LOG", ln=True, align='C')
+        pdf.set_font("Arial", "I", 10)
+        pdf.cell(200, 10, "Sijua Colliery - Official Emergency Inspection Report", ln=True, align='C')
+        pdf.ln(10)
         
+        # 3. Add Incident Metadata Box
+        pdf.set_font("Arial", "B", 12)
+        pdf.cell(40, 10, "Date & Time:", border=1)
+        pdf.set_font("Arial", "", 12)
+        pdf.cell(150, 10, f" {current_time}", border=1, ln=True)
+        
+        pdf.set_font("Arial", "B", 12)
+        pdf.cell(40, 10, "Status:", border=1)
+        pdf.set_font("Arial", "B", 12)
+        pdf.cell(150, 10, " CRITICAL - ACTION REQUIRED", border=1, ln=True)
+        pdf.ln(10)
+        
+        # 4. Add the Dictated Report
+        pdf.set_font("Arial", "B", 12)
+        pdf.cell(200, 10, "Incident Description:", ln=True)
+        pdf.set_font("Arial", "", 12)
+        
+        # Clean text so it formats perfectly in the PDF
+        clean_report = active_report.replace('\n', ' ').encode('latin-1', 'replace').decode('latin-1')
+        pdf.multi_cell(0, 10, clean_report)
+        pdf.ln(10)
+        
+        # 5. Add the DGMS Legal Notice
+        pdf.set_font("Arial", "B", 12)
+        pdf.cell(200, 10, "Legal Notice of Inspection:", ln=True)
+        pdf.set_font("Arial", "", 10)
+        legal_text = "Pursuant to DGMS Circular No. 3 of 2020, this document serves as the official statutory log for the incident reported above. Immediate physical inspection by the Shift Engineer and Vulcanizing Crew is mandated. Do not wait for scheduled maintenance. Falsification of this statutory log is a punishable offense under the Mines Act, 1952."
+        pdf.multi_cell(0, 6, legal_text)
+        
+        # 6. Add Signature Lines
+        pdf.ln(20)
+        pdf.cell(95, 10, "___________________________", align='C')
+        pdf.cell(95, 10, "___________________________", align='C', ln=True)
+        pdf.cell(95, 10, "Shift Engineer Signature", align='C')
+        pdf.cell(95, 10, "Mine Manager Signature", align='C')
+        
+        # Convert PDF to bytes for downloading
+        pdf_bytes = pdf.output(dest="S").encode("latin-1")
+        
+        # The Download Button
         st.download_button(
-            label="📄 Download Shift Report (CSV)" if lang == "English" else "📄 शिफ्ट रिपोर्ट डाउनलोड करें (CSV)",
-            data=report_csv,
-            file_name=f"DGMS_Shift_Report_{current_time[:10]}.csv",
-            mime="text/csv",
+            label="📄 Download Official DGMS Report (PDF)" if lang == "English" else "📄 आधिकारिक DGMS रिपोर्ट डाउनलोड करें (PDF)",
+            data=pdf_bytes,
+            file_name=f"DGMS_Report_{current_time[:10]}.pdf",
+            mime="application/pdf",
+            type="primary"
         )
 # --- TAB 3: MAINTENANCE SCHEDULER ---
 with tab3:
