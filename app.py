@@ -302,6 +302,21 @@ with tab2:
                 st.info("📝 General log received. Control room notified for verification.")
             else:
                 st.info("📝 रिपोर्ट दर्ज कर ली गई है। वेरिफिकेशन के लिए कंट्रोल रूम को सूचित कर दिया गया है।")
+        # --- STATUTORY RECORD EXPORT ---
+        st.markdown("---")
+        st.markdown("### 📥 Statutory Record Management" if lang == "English" else "### 📥 वैधानिक रिकॉर्ड प्रबंधन")
+        
+        # Generate a quick CSV format of the report
+        import datetime
+        current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        report_csv = f"Timestamp,Incident_Description,Status\n{current_time},{active_report},ACTION_REQUIRED"
+        
+        st.download_button(
+            label="📄 Download Shift Report (CSV)" if lang == "English" else "📄 शिफ्ट रिपोर्ट डाउनलोड करें (CSV)",
+            data=report_csv,
+            file_name=f"DGMS_Shift_Report_{current_time[:10]}.csv",
+            mime="text/csv",
+        )
 # --- TAB 3: MAINTENANCE SCHEDULER ---
 with tab3:
     st.markdown("### ⚙️ Time-Based Preventive Maintenance")
