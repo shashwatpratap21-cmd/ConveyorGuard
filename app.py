@@ -135,9 +135,9 @@ with tab1:
     # --- NEW UPGRADE: The Calibration Slider ---
     st.markdown("### 🎛️ AI Sensitivity Calibration")
     st.info("Field adjustment: Increase threshold if heavy coal loads or dust are causing false alarms.")
-    confidence_threshold = st.slider(
+   confidence_threshold = st.slider(
         "Critical Damage Confidence Threshold",
-        min_value=0.50, max_value=0.99, value=0.90, step=0.01
+        min_value=0.10, max_value=0.99, value=0.50, step=0.01
     )
     st.markdown("---")
     
