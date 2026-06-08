@@ -1,4 +1,4 @@
-import streamlit as st
+mport streamlit as st
 import tensorflow as tf
 import numpy as np
 from PIL import Image
@@ -7,7 +7,14 @@ import os
 # --- PAGE CONFIG ---
 st.set_page_config(page_title="ConveyorGuard", page_icon="⛏️", layout="wide")
 
-# --- SIDEBAR: Calculator ---
+# --- CUSTOM LAYER HACK (Fixes the Quantization/Dense Error) ---
+@tf.keras.utils.register_keras_serializable()
+class SafeDense(tf.keras.layers.Dense):
+    def __init__(self, *args, **kwargs):
+        kwargs.pop('quantization_config', None)
+        super().__init__(*args, **kwargs)
+
+# --- SIDEBAR: Economic Impact Calculator ---
 st.sidebar.header("📉 Economic Impact Calculator")
 capacity = st.sidebar.number_input("Conveyor Capacity (TPH)", value=600)
 coal_price = st.sidebar.number_input("Coal Price (₹/t)", value=2200)
@@ -16,13 +23,12 @@ st.sidebar.error(f"🚨 Potential Hourly Loss: ₹ {(capacity * coal_price) / 10
 # --- MODEL LOADING ---
 @st.cache_resource
 def load_model():
-    # Ensure 'conveyorguard_model.h5' is in the same folder
-    return tf.keras.models.load_model('conveyorguard_model.h5', compile=False)
+    return tf.keras.models.load_model('conveyorguard_model.h5', compile=False, custom_objects={'Dense': SafeDense})
 
 try:
     model = load_model()
 except Exception as e:
-    st.sidebar.warning(f"Model file not found: {e}")
+    st.sidebar.warning(f"Model Error: {e}")
 
 st.title("⛏️ ConveyorGuard Dashboard")
 
@@ -46,13 +52,11 @@ with tab1:
         # INSTANT ANALYSIS
         with st.spinner("Analyzing belt health..."):
             prediction = model.predict(img_array)[0][0]
-            
             if prediction > confidence_threshold:
                 st.error(f"🚨 CRITICAL DAMAGE (Confidence: {prediction*100:.1f}%)")
+                st.warning("Action: Stop conveyor. Dispatch vulcanizing crew.")
             else:
-                st.success(f"✅ NORMAL / HEALTHY (Damage Probability: {prediction*100:.1f}%)")
-
-# Place your Tab 2 and Tab 3 logic below here
+                st.success(f"✅ NORMAL / HEALTHY (Damage Prob: {prediction*100:.1f}%)")
 # --- TAB 2: MANUAL OVERRIDE ---
 with tab2:
     st.markdown("### 🎙️ Emergency Manual Reporting")
