@@ -3,22 +3,34 @@ import tensorflow as tf
 import numpy as np
 from PIL import Image
 import os
+from twilio.rest import Client
 
 # --- PAGE CONFIG ---
 st.set_page_config(page_title="ConveyorGuard", page_icon="⛏️", layout="wide")
 
-# --- CUSTOM LAYER HACK (Fixes the Quantization/Dense Error) ---
+# --- TWILIO SMS CONFIGURATION ---
+def send_emergency_sms(alert_type, details):
+    # Ensure these are set in your Streamlit secrets
+    try:
+        TWILIO_SID = st.secrets["TWILIO_SID"]
+        TWILIO_TOKEN = st.secrets["TWILIO_TOKEN"]
+        client = Client(TWILIO_SID, TWILIO_TOKEN)
+        message = client.messages.create(
+            body=f"🚨 CONVEYORGUARD ALERT: {alert_type}\nDetails: {details}",
+            from_="+13367042789",
+            to="+918467068023"
+        )
+        return True
+    except Exception as e:
+        st.error(f"SMS Delivery Failed: {e}")
+        return False
+
+# --- KERAS FIX (SafeDense) ---
 @tf.keras.utils.register_keras_serializable()
 class SafeDense(tf.keras.layers.Dense):
     def __init__(self, *args, **kwargs):
         kwargs.pop('quantization_config', None)
         super().__init__(*args, **kwargs)
-
-# --- SIDEBAR: Economic Impact Calculator ---
-st.sidebar.header("📉 Economic Impact Calculator")
-capacity = st.sidebar.number_input("Conveyor Capacity (TPH)", value=600)
-coal_price = st.sidebar.number_input("Coal Price (₹/t)", value=2200)
-st.sidebar.error(f"🚨 Potential Hourly Loss: ₹ {(capacity * coal_price) / 100000:.2f} Lakh")
 
 # --- MODEL LOADING ---
 @st.cache_resource
@@ -28,35 +40,54 @@ def load_model():
 try:
     model = load_model()
 except Exception as e:
-    st.sidebar.warning(f"Model Error: {e}")
+    st.sidebar.warning(f"Model Load Error: {e}")
 
 st.title("⛏️ ConveyorGuard Dashboard")
+st.subheader("AI-Powered Inspection & Safety Management System")
 
 # --- TABS ---
-tab1, tab2, tab3 = st.tabs(["🚨 AI Inspection", "📝 Manual", "🛠️ Scheduler"])
+tab1, tab2, tab3 = st.tabs(["🚨 AI Vision Inspection", "📝 Manual Override (Codes)", "🛠️ Maintenance Scheduler"])
 
+# --- TAB 1: AI INSPECTION ---
 with tab1:
-    st.markdown("### 🎛️ AI Sensitivity Calibration")
-    confidence_threshold = st.slider("Threshold", 0.10, 0.99, 0.75, 0.01)
+    st.markdown("### Upload Conveyor Belt Image")
     
-    uploaded_file = st.file_uploader("Upload Conveyor Image", type=["jpg", "png", "jpeg"])
+    with st.expander("📋 DGMS Pre-Inspection Safety Protocol", expanded=True):
+        st.warning("""
+        **🟡 CRITICAL UNDERGROUND SAFETY REQUIREMENTS:**
+        * Inform the control room before starting.
+        * Maintain 1.5m clearance.
+        * Use crossover bridges only.
+        """)
+    
+    uploaded_file = st.file_uploader("Upload image", type=["jpg", "png", "jpeg"])
     
     if uploaded_file is not None:
         image = Image.open(uploaded_file).convert('RGB')
         st.image(image, use_container_width=True)
         
-        # Preprocessing
         img_resized = image.resize((224, 224))
         img_array = np.expand_dims(np.array(img_resized) / 255.0, axis=0)
         
-        # INSTANT ANALYSIS
-        with st.spinner("Analyzing belt health..."):
+        with st.spinner("Analyzing..."):
             prediction = model.predict(img_array)[0][0]
-            if prediction > confidence_threshold:
-                st.error(f"🚨 CRITICAL DAMAGE (Confidence: {prediction*100:.1f}%)")
-                st.warning("Action: Stop conveyor. Dispatch vulcanizing crew.")
+            if prediction > 0.5:
+                st.error(f"🚨 CRITICAL DAMAGE ({prediction * 100:.1f}% Confidence)")
             else:
-                st.success(f"✅ NORMAL / HEALTHY (Damage Prob: {prediction*100:.1f}%)")
+                st.success(f"✅ NORMAL / HEALTHY LOAD")
+
+# --- TAB 2: MANUAL OVERRIDE ---
+with tab2:
+    st.markdown("### 🎙️ Emergency Manual Reporting")
+    incident = st.text_area("Describe the incident (e.g., TEAR, FIRE, WATER):").upper()
+    
+    if st.button("Submit & Send SMS"):
+        if incident:
+            success = send_emergency_sms("Manual Hazard Report", incident)
+            if success:
+                st.success("✅ Report logged and SMS alert dispatched to Mine Manager.")
+        else:
+            st.warning("Please enter a description.")
 # --- TAB 2: MANUAL OVERRIDE ---
 with tab2:
     st.markdown("### 🎙️ Emergency Manual Reporting")
