@@ -132,12 +132,19 @@ with tab1:
         * **Hazard Awareness:** Ensure cap lamps are secured and report any heavy coal dust accumulation near seized rollers immediately.
         """)
     
-    st.markdown("### 🎛️ AI Sensitivity Calibration")
-    st.info("Field adjustment: Increase threshold if heavy coal loads or dust are causing false alarms.")
-    confidence_threshold = st.slider(
-        "Critical Damage Confidence Threshold",
-        min_value=0.50, max_value=0.99, value=0.90, step=0.01
-    )
+# --- ENTERPRISE UPGRADE: Admin Locked Calibration ---
+    st.markdown("### 🎛️ AI Calibration (Safety Officer Only)")
+    
+    # Create a password input
+    admin_password = st.text_input("Enter Admin Password to Unlock Calibration:", type="password")
+    
+    # Check the password
+    if admin_password == "dgms2026":  # You can change this password
+        st.success("🔓 Calibration Unlocked")
+        confidence_threshold = st.slider("Threshold", 0.10, 0.99, 0.75, 0.01)
+    else:
+        st.info("🔒 System running at statutory default threshold (0.75).")
+        confidence_threshold = 0.75  # The invisible default for workers
     st.markdown("---")
     
     uploaded_file = st.file_uploader("Drag and drop or click to upload", type=["jpg", "png", "jpeg"])
