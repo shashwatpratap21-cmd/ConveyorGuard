@@ -132,19 +132,21 @@ with tab1:
         * **Hazard Awareness:** Ensure cap lamps are secured and report any heavy coal dust accumulation near seized rollers immediately.
         """)
     
-# --- ENTERPRISE UPGRADE: Admin Locked Calibration ---
+    # --- ENTERPRISE UPGRADE: Admin Locked Calibration ---
     st.markdown("### 🎛️ AI Calibration (Safety Officer Only)")
     
     # Create a password input
     admin_password = st.text_input("Enter Admin Password to Unlock Calibration:", type="password")
     
     # Check the password
-    if admin_password == "dgms2026":  # You can change this password
+    if admin_password == "dgms2026": 
         st.success("🔓 Calibration Unlocked")
-        confidence_threshold = st.slider("Threshold", 0.10, 0.99, 0.75, 0.01)
+        # Slider defaults to 0.50 now
+        confidence_threshold = st.slider("Threshold", 0.10, 0.99, 0.50, 0.01)
     else:
-        st.info("🔒 System running at statutory default threshold (0.75).")
-        confidence_threshold = 0.75  # The invisible default for workers
+        st.info("🔒 System running at statutory default threshold (0.50).")
+        # The invisible default is now 0.50 to catch the anomaly!
+        confidence_threshold = 0.50  
     st.markdown("---")
     
     uploaded_file = st.file_uploader("Drag and drop or click to upload", type=["jpg", "png", "jpeg"])
@@ -193,7 +195,6 @@ with tab1:
                         
             except Exception as e:
                 st.error(f"Model Error: {e}")
-
 # --- TAB 2: MANUAL OVERRIDE ---
 with tab2:
     st.markdown("### 🎙️ Emergency Manual Reporting")
