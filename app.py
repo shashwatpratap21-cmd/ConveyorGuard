@@ -212,7 +212,7 @@ with tab2:
     if st.session_state.saved_report:
         active_report = st.session_state.saved_report
         
-        # 1. Belt Tear
+        # 1. Belt Tear (WITH HIERARCHY SMS)
         if any(word in active_report for word in ["TEAR", "CUT", "RUPTURE", "BROKEN", "FAT", "TOOT", "FATA", "TUTA"]):
             if lang == "English":
                 st.error("🚨 CRITICAL ALERT LOGGED: Belt Tear/Rupture detected.")
@@ -247,7 +247,7 @@ with tab2:
                         if success:
                             st.success("✅ वैधानिक SMS अलर्ट सफलतापूर्वक भेज दिए गए!")
                 
-        # 2. Fire/Smoke
+        # 2. Fire/Smoke (WITH HIERARCHY SMS)
         elif any(word in active_report for word in ["FIRE", "SMOKE", "BURNING", "SPARK", "AAG", "DHUAN", "JALA", "SULAG"]):
             if lang == "English":
                 st.error("🔥 FIRE EMERGENCY LOGGED: Combustion indicators detected.")
@@ -291,7 +291,7 @@ with tab2:
                 st.warning("⚠️ चेतावनी: कोयला गिरने या बेल्ट जाम होने की सूचना है।")
                 st.warning("**कार्रवाई (Action):** सफाई टीम को भेजें ताकि घर्षण (friction) से आग न लगे।")
 
-        # 4. Water/Flooding
+        # 4. Water/Flooding (WITH HIERARCHY SMS)
         elif any(word in active_report for word in ["WATER", "FLOOD", "INUND", "LEAK", "PAANI", "BAARISH", "RISSA"]):
             if lang == "English":
                 st.error("🌊 INUNDATION RISK LOGGED: Water flooding reported.")
@@ -331,7 +331,77 @@ with tab2:
                 st.info("📝 General log received. Control room notified for verification.")
             else:
                 st.info("📝 रिपोर्ट दर्ज कर ली गई है। वेरिफिकेशन के लिए कंट्रोल रूम को सूचित कर दिया गया है।")
-
+        
+        # =====================================================================
+        # --- STATUTORY RECORD EXPORT (PDF UPGRADE) ---
+        # =====================================================================
+        st.markdown("---")
+        st.markdown("### 📥 Statutory Record Management" if lang == "English" else "### 📥 वैधानिक रिकॉर्ड प्रबंधन")
+        
+        # Import inside the block just in case it's missing at the top of your file
+        import datetime
+        from fpdf import FPDF
+        
+        if st.button("📥 Generate Statutory PDF" if lang == "English" else "📥 वैधानिक PDF जनरेट करें"):
+            current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            
+            pdf = FPDF()
+            pdf.add_page()
+            
+            # Official Headers
+            pdf.set_font("Arial", "B", 16)
+            pdf.cell(200, 10, "CONVEYORGUARD - DGMS STATUTORY LOG", ln=True, align='C')
+            pdf.set_font("Arial", "I", 10)
+            pdf.cell(200, 10, "Sijua Colliery - Official Emergency Inspection Report", ln=True, align='C')
+            pdf.ln(10)
+            
+            # Metadata
+            pdf.set_font("Arial", "B", 12)
+            pdf.cell(40, 10, "Date & Time:", border=1)
+            pdf.set_font("Arial", "", 12)
+            pdf.cell(150, 10, f" {current_time}", border=1, ln=True)
+            
+            pdf.set_font("Arial", "B", 12)
+            pdf.cell(40, 10, "Status:", border=1)
+            pdf.set_font("Arial", "B", 12)
+            pdf.cell(150, 10, " INCIDENT LOGGED", border=1, ln=True)
+            pdf.ln(10)
+            
+            # Report Content
+            pdf.set_font("Arial", "B", 12)
+            pdf.cell(200, 10, "Incident Description:", ln=True)
+            pdf.set_font("Arial", "", 12)
+            
+            # Clean text to prevent PDF rendering errors
+            clean_report = active_report.replace('\n', ' ').encode('latin-1', 'replace').decode('latin-1')
+            pdf.multi_cell(0, 10, clean_report)
+            pdf.ln(10)
+            
+            # Legal Notice
+            pdf.set_font("Arial", "B", 12)
+            pdf.cell(200, 10, "Legal Notice of Inspection:", ln=True)
+            pdf.set_font("Arial", "", 10)
+            legal_text = "Pursuant to DGMS Circular No. 3 of 2020, this document serves as the official statutory log for the incident reported above. Falsification of this statutory log is a punishable offense under the Mines Act, 1952."
+            pdf.multi_cell(0, 6, legal_text)
+            
+            # Signatures
+            pdf.ln(20)
+            pdf.cell(95, 10, "___________________________", align='C')
+            pdf.cell(95, 10, "___________________________", align='C', ln=True)
+            pdf.cell(95, 10, "Shift Engineer Signature", align='C')
+            pdf.cell(95, 10, "Mine Manager Signature", align='C')
+            
+            # Output PDF
+            pdf_bytes = pdf.output(dest="S").encode("latin-1")
+            
+            # Render the final download button
+            st.download_button(
+                label="📄 Download Official DGMS Report (PDF)" if lang == "English" else "📄 आधिकारिक DGMS रिपोर्ट डाउनलोड करें (PDF)",
+                data=pdf_bytes,
+                file_name=f"DGMS_Report_{current_time[:10]}.pdf",
+                mime="application/pdf",
+                type="primary"
+            )
 # --- TAB 3: MAINTENANCE SCHEDULER ---
 with tab3:
     st.markdown("### 🛠️ Predictive Maintenance & Statutory Compliance")
