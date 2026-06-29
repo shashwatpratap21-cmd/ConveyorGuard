@@ -162,11 +162,11 @@ with tab1:
 
     uploaded_file = st.file_uploader("Drag and drop or click to upload", type=["jpg", "png", "jpeg"])
 
-    if uploaded_file is not None:
+if uploaded_file is not None:
         if not models_loaded:
-st.error("Models failed to load. See error message above.")
+            st.error("Models failed to load. See error message above.")
             st.stop()
-
+            
         image = Image.open(uploaded_file).convert('RGB')
         img_array = np.array(image)
 
