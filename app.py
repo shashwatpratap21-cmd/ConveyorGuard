@@ -166,10 +166,10 @@ with tab1:
     uploaded_file = st.file_uploader("Drag and drop or click to upload", type=["jpg", "png", "jpeg"])
 
 if uploaded_file is not None:
-        if not models_loaded:
-            st.error("Models failed to load. See error message above.")
+        if not models_loaded or conveyor_agent is None:
+            st.error("🚨 Models failed to load! Check the top of the dashboard for the exact error.")
             st.stop()
-            
+
         image = Image.open(uploaded_file).convert('RGB')
         img_array = np.array(image)
 
