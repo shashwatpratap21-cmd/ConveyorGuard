@@ -173,57 +173,65 @@ with tab1:
 
         col_img, col_results = st.columns([1.5, 1])
 
-        with col_img:
-            with st.spinner("AI Agents inspecting conveyor belt..."):
-                try:
-                    conveyor_agent
-                except NameError:
-                    st.error("AI models failed to load. Check logs via 'Manage app' for details.")
-                    st.stop()
-                
-                res_conveyor = conveyor_agent(img_array, conf=confidence_threshold, verbose=False)
-                res_spillage = spillage_agent(img_array, conf=confidence_threshold, verbose=False)
-                res_idler = idler_agent(img_array, conf=confidence_threshold, verbose=False)
+with col_img:
+    with st.spinner("AI Agents inspecting conveyor belt..."):
+        res_conveyor = conveyor_agent(img_array, conf=confidence_threshold, verbose=False)
+        res_spillage = spillage_agent(img_array, conf=confidence_threshold, verbose=False)
+        res_idler = idler_agent(img_array, conf=confidence_threshold, verbose=False)
 
-                annotated_img = res_conveyor[0].plot()
-                annotated_img = res_spillage[0].plot(img=annotated_img)
-                annotated_img = res_idler[0].plot(img=annotated_img)
+        # Use plot() directly — works for both detection and segmentation
+        annotated_img = res_conveyor[0].plot()
+        annotated_img = res_spillage[0].plot(img=annotated_img)
+        annotated_img = res_idler[0].plot(img=annotated_img)
 
-                final_display_img = cv2.cvtColor(annotated_img, cv2.COLOR_BGR2RGB)
+        final_display_img = cv2.cvtColor(annotated_img, cv2.COLOR_BGR2RGB)
 
-            st.image(final_display_img, use_container_width=True)
-        with col_results:
-            st.markdown("### Inspection Verdict:")
+    st.image(final_display_img, use_container_width=True)
 
-            total_anomalies = len(res_conveyor[0].boxes) + len(res_spillage[0].boxes) + len(res_idler[0].boxes)
+with col_results:
+    st.markdown("### Inspection Verdict:")
 
-            if total_anomalies > 0:
-                st.error(f"🚨 {total_anomalies} ANOMALIES DETECTED")
-                st.error("**Action:** Dispatch maintenance team to verify bounding box zones.")
-                st.markdown("---")
+    # For segmentation models use masks not boxes
+    def count_detections(result):
+        try:
+            if result[0].masks is not None:
+                return len(result[0].masks)
+            elif result[0].boxes is not None:
+                return len(result[0].boxes)
+            return 0
+        except:
+            return 0
 
-                if len(res_conveyor[0].boxes) > 0:
-                    st.warning("⚠️ Edge alignment or debris detected.")
-                if len(res_spillage[0].boxes) > 0:
-                    st.warning("⚠️ Material spillage or foreign objects detected.")
-                if len(res_idler[0].boxes) > 0:
-                    st.warning("⚠️ Idler/Roller anomaly detected.")
+    total_anomalies = (
+        count_detections(res_conveyor) +
+        count_detections(res_spillage) +
+        count_detections(res_idler)
+    )
 
-                st.info(
-                    "📋 DGMS Statutory Recommendation:\n"
-                    "• Immediate physical inspection required.\n"
-                    "• Log incident in the statutory register."
-                )
-
-            else:
-                st.success("✅ NORMAL / HEALTHY LOAD")
-                st.success("AI detected zero anomalies above the threshold.")
-                st.markdown("---")
-                st.info(
-                    "📋 Routine Recommendation:\n"
-                    "• Next scheduled inspection: 7 days\n"
-                    "• Standard: DGMS Circular No. 3 of 2020"
-                )
+    if total_anomalies > 0:
+        st.error(f"🚨 {total_anomalies} ANOMALIES DETECTED")
+        st.error("**Action:** Dispatch maintenance team to verify zones.")
+        st.markdown("---")
+        if count_detections(res_conveyor) > 0:
+            st.warning("⚠️ Edge alignment or debris detected.")
+        if count_detections(res_spillage) > 0:
+            st.warning("⚠️ Material spillage or foreign objects detected.")
+        if count_detections(res_idler) > 0:
+            st.warning("⚠️ Idler/Roller anomaly detected.")
+        st.info(
+            "📋 DGMS Statutory Recommendation:\n"
+            "• Immediate physical inspection required.\n"
+            "• Log incident in the statutory register."
+        )
+    else:
+        st.success("✅ NORMAL / HEALTHY LOAD")
+        st.success("AI detected zero anomalies above the threshold.")
+        st.markdown("---")
+        st.info(
+            "📋 Routine Recommendation:\n"
+            "• Next scheduled inspection: 7 days\n"
+            "• Standard: DGMS Circular No. 3 of 2020"
+        )
 # --- TAB 2: MANUAL OVERRIDE ---
 with tab2:
     st.markdown("### 🎙️ Emergency Manual Reporting")
