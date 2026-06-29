@@ -50,7 +50,6 @@ capacity = st.sidebar.number_input("Conveyor Capacity (TPH)", min_value=100, max
 coal_price = st.sidebar.number_input("Coal Price (₹/t)", min_value=1000, max_value=10000, value=2200, step=100)
 downtime = st.sidebar.number_input("Predicted Downtime (h)", min_value=0.5, max_value=24.0, value=3.0, step=0.5)
 
-# Financial Math
 hourly_loss_lakhs = (capacity * coal_price) / 100000
 total_loss_lakhs = hourly_loss_lakhs * downtime
 
@@ -60,7 +59,6 @@ st.sidebar.error(f"🚨 ₹ {total_loss_lakhs:.2f} Lakh")
 st.sidebar.caption("Based on Sijua Colliery average capacity of 600 TPH at ₹2,200/tonne coal price.")
 st.sidebar.markdown("---")
 
-# --- MAIN DASHBOARD HEADER ---
 st.title("⛏️ ConveyorGuard AI Dashboard")
 st.subheader("Tata Steel Unified Multi-Agent Vision System")
 
@@ -84,72 +82,30 @@ def load_ai_agents():
         spillage_path = os.path.join(base_dir, 'spillage_model.pt')
         idler_path = os.path.join(base_dir, 'idler_model.pt')
 
-    conveyor_agent = YOLO(conveyor_path)
-    spillage_agent = YOLO(spillage_path)
-    idler_agent = YOLO(idler_path)
+    c_agent = YOLO(conveyor_path)
+    s_agent = YOLO(spillage_path)
+    i_agent = YOLO(idler_path)
     
-    return conveyor_agent, spillage_agent, idler_agent
+    return c_agent, s_agent, i_agent
 
-# THIS IS THE KEY CHANGE — Pre-define the agents so the app doesn't crash
-conveyor_agent, spillage_agent, idler_agent = None, None, None
+# SAFE INITIALIZATION TO PREVENT NAME ERROR
+conveyor_agent = None
+spillage_agent = None
+idler_agent = None
 models_loaded = False
+model_error_message = ""
 
 try:
     conveyor_agent, spillage_agent, idler_agent = load_ai_agents()
     models_loaded = True
 except Exception as e:
-    st.error(f"⚠️ REAL MODEL LOADING ERROR: {e}")
+    model_error_message = str(e)
+    st.error(f"⚠️ REAL MODEL LOADING ERROR: {model_error_message}")
 
 tab1, tab2, tab3 = st.tabs(["🚨 AI Vision Inspection", "📝 Manual Override (Codes)", "🛠️ Maintenance Scheduler"])
 
 with tab1:
     st.markdown("### Upload Conveyor Belt Image")
-
-    with st.expander("📋 DGMS Pre-Inspection Safety Protocol", expanded=False):
-        header_html = '''
-        <div style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);border-left:4px solid #f39c12;border-radius:8px;padding:20px;margin-bottom:10px;">
-            <h4 style="color:#f39c12;margin-top:0;">🟡 CRITICAL UNDERGROUND SAFETY REQUIREMENTS</h4>
-            <p style="color:#aaaaaa;font-size:11px;margin-top:-10px;">As per Coal Mines Regulation 2017 & DGMS Circular No. 3 of 2020</p>
-        </div>
-        '''
-        st.markdown(header_html, unsafe_allow_html=True)
-
-        col_a, col_b = st.columns(2)
-
-        with col_a:
-            left_html = '''
-            <div style="background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:15px;">
-                <p style="color:#58a6ff;font-weight:bold;margin-bottom:10px;">📡 Communication</p>
-                <p style="color:#e6edf3;font-size:13px;">Inform the <b>surface control room</b> before beginning your inspection walk.</p>
-                <hr style="border-color:#30363d;">
-                <p style="color:#58a6ff;font-weight:bold;margin-bottom:10px;">📏 Clearance</p>
-                <p style="color:#e6edf3;font-size:13px;">Maintain a strict <b>1.5m clearance</b> from moving idlers, tail pulleys, and the drive head at all times.</p>
-            </div>
-            '''
-            st.markdown(left_html, unsafe_allow_html=True)
-
-        with col_b:
-            right_html = '''
-            <div style="background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:15px;">
-                <p style="color:#58a6ff;font-weight:bold;margin-bottom:10px;">🚷 Movement</p>
-                <p style="color:#e6edf3;font-size:13px;"><b>NEVER</b> step over, under, or onto a moving belt. Use designated <b>crossover bridges only</b>.</p>
-                <hr style="border-color:#30363d;">
-                <p style="color:#58a6ff;font-weight:bold;margin-bottom:10px;">🆘 Emergency Readiness</p>
-                <p style="color:#e6edf3;font-size:13px;">Visually locate the nearest <b>emergency pull-cord</b> before beginning your inspection.</p>
-            </div>
-            '''
-            st.markdown(right_html, unsafe_allow_html=True)
-
-        st.markdown("<br>", unsafe_allow_html=True)
-
-        footer_html = '''
-        <div style="background:linear-gradient(135deg,#2d1b1b 0%,#1a0a0a 100%);border:1px solid #f85149;border-radius:8px;padding:12px 20px;text-align:center;">
-            <span style="color:#f85149;font-weight:bold;font-size:13px;">
-                🔴 EMERGENCY PROTOCOL &nbsp;|&nbsp; Pull cord → Report to Overman → Evacuate → Alert Surface Control Room
-            </span>
-        </div>
-        '''
-        st.markdown(footer_html, unsafe_allow_html=True)
 
     st.markdown("### 🎛️ AI Calibration (Safety Officer Only)")
     admin_password = st.text_input("Enter Admin Password to Unlock Calibration:", type="password")
@@ -165,9 +121,11 @@ with tab1:
 
     uploaded_file = st.file_uploader("Drag and drop or click to upload", type=["jpg", "png", "jpeg"])
 
-if uploaded_file is not None:
+    if uploaded_file is not None:
+        # THE TRAP: If models failed, STOP immediately and show the real error.
         if not models_loaded or conveyor_agent is None:
-            st.error("🚨 Models failed to load! Check the top of the dashboard for the exact error.")
+            st.error("🚨 The AI models failed to load in the background. We cannot process the image. Here is the exact reason why:")
+            st.code(model_error_message)
             st.stop()
 
         image = Image.open(uploaded_file).convert('RGB')
@@ -211,27 +169,9 @@ if uploaded_file is not None:
             if total_anomalies > 0:
                 st.error(f"🚨 {total_anomalies} ANOMALIES DETECTED")
                 st.error("**Action:** Dispatch maintenance team to verify zones.")
-                st.markdown("---")
-                if count_detections(res_conveyor) > 0:
-                    st.warning("⚠️ Edge alignment or debris detected.")
-                if count_detections(res_spillage) > 0:
-                    st.warning("⚠️ Material spillage or foreign objects detected.")
-                if count_detections(res_idler) > 0:
-                    st.warning("⚠️ Idler/Roller anomaly detected.")
-                st.info(
-                    "📋 DGMS Statutory Recommendation:\n"
-                    "• Immediate physical inspection required.\n"
-                    "• Log incident in the statutory register."
-                )
             else:
                 st.success("✅ NORMAL / HEALTHY LOAD")
                 st.success("AI detected zero anomalies above the threshold.")
-                st.markdown("---")
-                st.info(
-                    "📋 Routine Recommendation:\n"
-                    "• Next scheduled inspection: 7 days\n"
-                    "• Standard: DGMS Circular No. 3 of 2020"
-                )
 
 # --- TAB 2: MANUAL OVERRIDE ---
 with tab2:
@@ -257,25 +197,15 @@ with tab2:
     if st.session_state.saved_report:
         active_report = st.session_state.saved_report
         
-        # Incident Checks
         if any(word in active_report for word in ["TEAR", "CUT", "BROKEN", "FATA", "TUTA"]):
             st.error("🚨 CRITICAL ALERT LOGGED: Belt Tear/Rupture detected." if lang == "English" else "🚨 गंभीर चेतावनी: बेल्ट फटने की सूचना मिली है।")
-            if st.button("🚨 Dispatch Alert Network", type="primary"):
-                send_emergency_sms("Critical Belt Rupture", active_report)
-                
         elif any(word in active_report for word in ["FIRE", "SMOKE", "AAG", "DHUAN"]):
             st.error("🔥 FIRE EMERGENCY LOGGED: Combustion indicators detected." if lang == "English" else "🔥 आग आपातकाल: आग या धुएं की सूचना मिली है।")
-            if st.button("🚨 Dispatch Alert Network", type="primary"):
-                send_emergency_sms("Underground Fire Detected", active_report)
-                
         elif any(word in active_report for word in ["WATER", "FLOOD", "PAANI", "BAARISH"]):
             st.error("🌊 INUNDATION RISK LOGGED: Water flooding reported." if lang == "English" else "🌊 बाढ़ का खतरा: खदान में पानी भरने की सूचना है।")
-            if st.button("🚨 Dispatch Alert Network", type="primary"):
-                send_emergency_sms("Critical Inundation Risk", active_report)
         else:
             st.info("📝 General log received. Control room notified." if lang == "English" else "📝 रिपोर्ट दर्ज कर ली गई है।")
         
-        # PDF Generator
         st.markdown("---")
         if st.button("📥 Generate Statutory PDF" if lang == "English" else "📥 वैधानिक PDF जनरेट करें"):
             current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
