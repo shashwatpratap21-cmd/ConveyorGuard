@@ -189,11 +189,11 @@ with st.expander("📋 DGMS Pre-Inspection Safety Protocol", expanded=False):
                 st.success(f"✅ NORMAL / HEALTHY LOAD")
                 st.success("AI detected zero anomalies above the threshold.")
                 st.markdown("---")
-                st.info("""
-                **📋 Routine Recommendation:**
-                * Next scheduled inspection: 7 days
-                * Standard: DGMS Circular No. 3 of 2020
-                """)
+st.info(
+    "**📋 Routine Recommendation:**\n"
+    "* Next scheduled inspection: 7 days\n"
+    "* Standard: DGMS Circular No. 3 of 2020"
+)
 
 # --- TAB 2: MANUAL OVERRIDE ---
 with tab2:
