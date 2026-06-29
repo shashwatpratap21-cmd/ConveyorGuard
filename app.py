@@ -1,40 +1,14 @@
-import subprocess
-import sys
-
-# =========================================================================
-# --- CRITICAL STREAMLIT CLOUD FIX ---
-# Ultralytics secretly installs the GUI version of OpenCV which crashes the server.
-# This forcefully uninstalls it and installs the headless version at runtime.
-# =========================================================================
-try:
-    import cv2
-except ImportError:
-    if 'cv2' in sys.modules:
-        del sys.modules['cv2']
-    subprocess.check_call([sys.executable, "-m", "pip", "uninstall", "-y", "opencv-python", "opencv-python-headless"])
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "opencv-python-headless"])
-
 import streamlit as st
 from ultralytics import YOLO
 import numpy as np
 from PIL import Image
-import cv2
 import os
 from twilio.rest import Client
 import datetime
 from fpdf import FPDF
 
-# ... [Keep the rest of your app.py code exactly the same below this] ...
-import streamlit as st
-from ultralytics import YOLO
-import numpy as np
-from PIL import Image
-import cv2
-import os
-from twilio.rest import Client
-import datetime
-from fpdf import FPDF
-
+# FORCE OPENCV HEADLESS MODE VIA ENVIRONMENT VARIABLE BEFORE ANYTHING ELSE LOADS
+os.environ["OPENCV_VIDEOIO_PRIORITY_MSMF"] = "0"
 # =========================================================================
 # --- TWILIO SMS CONFIGURATION ---
 # =========================================================================
