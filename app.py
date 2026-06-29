@@ -97,9 +97,11 @@ def load_ai_agents():
 # THIS IS THE KEY CHANGE — shows real error instead of hiding it
 models_loaded = False
 try:
-    conveyor_agent, spillage_agent,
+    conveyor_agent, spillage_agent, idler_agent = load_ai_agents()
+    models_loaded = True
+except Exception as e:
+    st.error(f"⚠️ REAL MODEL LOADING ERROR: {e}")
 
-# --- TABS LAYOUT ---
 tab1, tab2, tab3 = st.tabs(["🚨 AI Vision Inspection", "📝 Manual Override (Codes)", "🛠️ Maintenance Scheduler"])
 
 with tab1:
