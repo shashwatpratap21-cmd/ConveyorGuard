@@ -176,8 +176,11 @@ with tab2:
     
     lang = st.radio("Response Language / उत्तर की भाषा:", ["English", "हिंदी"], horizontal=True)
     
+    # ==========================================
+    # THE FIX: We are putting the storage box back!
+    # ==========================================
     if 'saved_report' not in st.session_state:
-        st.session_state.saved_report = ""
+        st.session_state['saved_report'] = ""
 
     prompt_text = "Describe the incident in detail:" if lang == "English" else "घटना का विस्तार से वर्णन करें:"
     incident_report = st.text_area(prompt_text, key="incident_input").upper()
@@ -186,12 +189,12 @@ with tab2:
     
     if st.button(submit_text, type="primary"):
         if incident_report:
-            st.session_state.saved_report = incident_report
+            st.session_state['saved_report'] = incident_report
         else:
             st.warning("Please enter a description before submitting." if lang == "English" else "कृपया सबमिट करने से पहले विवरण दर्ज करें।")
 
-    if st.session_state.saved_report:
-        active_report = st.session_state.saved_report
+    if st.session_state['saved_report']:
+        active_report = st.session_state['saved_report']
         
         if any(word in active_report for word in ["TEAR", "CUT", "BROKEN", "FATA", "TUTA"]):
             st.error("🚨 CRITICAL ALERT LOGGED: Belt Tear/Rupture detected." if lang == "English" else "🚨 गंभीर चेतावनी: बेल्ट फटने की सूचना मिली है।")
@@ -221,7 +224,6 @@ with tab2:
                 mime="application/pdf",
                 type="primary"
             )
-
 # --- TAB 3: MAINTENANCE SCHEDULER ---
 with tab3:
     st.markdown("### 🛠️ Predictive Maintenance & Statutory Compliance")
