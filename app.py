@@ -74,11 +74,8 @@ st.subheader("Tata Steel Unified Multi-Agent Vision System")
 @st.cache_resource
 def load_ai_agents():
     import torch
-    # Fix for PyTorch 2.6 weights_only change
-    torch.serialization.add_safe_globals([
-        'ultralytics.nn.tasks.SegmentationModel',
-        'ultralytics.nn.tasks.DetectionModel'
-    ])
+    from ultralytics.nn.tasks import SegmentationModel, DetectionModel
+    torch.serialization.add_safe_globals([SegmentationModel, DetectionModel])
     
     base_dir = os.path.dirname(os.path.abspath(__file__))
     
@@ -96,10 +93,11 @@ def load_ai_agents():
     idler_agent = YOLO(idler_path)
     
     return conveyor_agent, spillage_agent, idler_agent
+
+# THIS IS THE KEY CHANGE — shows real error instead of hiding it
+models_loaded = False
 try:
-    conveyor_agent, spillage_agent, idler_agent = load_ai_agents()
-except Exception as e:
-    st.warning(f"Could not load AI models. Ensure 'models' folder exists with the .pt files. Error: {e}")
+    conveyor_agent, spillage_agent,
 
 # --- TABS LAYOUT ---
 tab1, tab2, tab3 = st.tabs(["🚨 AI Vision Inspection", "📝 Manual Override (Codes)", "🛠️ Maintenance Scheduler"])
@@ -167,9 +165,14 @@ with tab1:
 
     uploaded_file = st.file_uploader("Drag and drop or click to upload", type=["jpg", "png", "jpeg"])
 
-    if uploaded_file is not None:
-        image = Image.open(uploaded_file).convert('RGB')
-        img_array = np.array(image)
+if uploaded_file is not None:
+    if not models_loaded:
+        st.error("Models failed to load. See error message above.")
+        st.stop()
+    
+    image = Image.open(uploaded_file).convert('RGB')
+    img_array = np.array(image)
+    # ... rest of your code continues unchanged
 
         col_img, col_results = st.columns([1.5, 1])
 
