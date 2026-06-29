@@ -1,6 +1,10 @@
-streamlit
-tensorflow
+# Core AI and Vision
+ultralytics
+opencv-python
 numpy
 pillow
+
+# Optional Features (Leave these if you plan to build them!)
+streamlit
 twilio
 fpdf
