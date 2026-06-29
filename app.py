@@ -180,11 +180,11 @@ with st.expander("📋 DGMS Pre-Inspection Safety Protocol", expanded=False):
                 if len(res_spillage[0].boxes) > 0: st.warning("⚠️ Material spillage or foreign objects detected.")
                 if len(res_idler[0].boxes) > 0: st.warning("⚠️ Idler/Roller anomaly detected.")
                 
-                st.info("""
-                **📋 DGMS Statutory Recommendation:**
-                * Immediate physical inspection required.
-                * Log incident in the statutory register.
-                """)
+    st.info(
+    "**📋 DGMS Statutory Recommendation:**\n"
+    "* Immediate physical inspection required.\n"
+    "* Log incident in the statutory register."
+)
             else:
                 st.success(f"✅ NORMAL / HEALTHY LOAD")
                 st.success("AI detected zero anomalies above the threshold.")
