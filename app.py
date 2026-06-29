@@ -90,7 +90,10 @@ def load_ai_agents():
     
     return conveyor_agent, spillage_agent, idler_agent
 
+# THIS IS THE KEY CHANGE — Pre-define the agents so the app doesn't crash
+conveyor_agent, spillage_agent, idler_agent = None, None, None
 models_loaded = False
+
 try:
     conveyor_agent, spillage_agent, idler_agent = load_ai_agents()
     models_loaded = True
