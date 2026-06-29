@@ -65,15 +65,27 @@ st.subheader("Tata Steel Unified Multi-Agent Vision System")
 # =========================================================================
 @st.cache_resource
 def load_ai_agents():
-    # Look inside the 'models' folder we created on GitHub
-    base_dir = os.path.dirname(__file__)
+    # This automatically finds the exact folder app.py is sitting in
+    base_dir = os.path.dirname(os.path.abspath(__file__))
     
-    conveyor_agent = YOLO(os.path.join(base_dir, 'models', 'conveyor_model.pt'))
-    spillage_agent = YOLO(os.path.join(base_dir, 'models', 'spillage_model.pt'))
-    idler_agent = YOLO(os.path.join(base_dir, 'models', 'idler_model.pt'))
+    # Try looking for 'models/file.pt' first
+    conveyor_path = os.path.join(base_dir, 'models', 'conveyor_model.pt')
+    spillage_path = os.path.join(base_dir, 'models', 'spillage_model.pt')
+    idler_path = os.path.join(base_dir, 'models', 'idler_model.pt')
+    
+    # Fallback: If 'models/' folder isn't found, look directly in the main folder
+    if not os.path.exists(conveyor_path):
+        conveyor_path = os.path.join(base_dir, 'conveyor_model.pt')
+        spillage_path = os.path.join(base_dir, 'spillage_model.pt')
+        idler_path = os.path.join(base_dir, 'idler_model.pt')
+        
+    print(f"Loading weights from paths:\n{conveyor_path}\n{spillage_path}\n{idler_path}")
+    
+    conveyor_agent = YOLO(conveyor_path)
+    spillage_agent = YOLO(spillage_path)
+    idler_agent = YOLO(idler_path)
     
     return conveyor_agent, spillage_agent, idler_agent
-
 try:
     conveyor_agent, spillage_agent, idler_agent = load_ai_agents()
 except Exception as e:
