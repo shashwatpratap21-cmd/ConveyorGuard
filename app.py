@@ -67,10 +67,6 @@ st.subheader("Tata Steel Unified Multi-Agent Vision System")
 # =========================================================================
 @st.cache_resource
 def load_ai_agents():
-    import torch
-    from ultralytics.nn.tasks import SegmentationModel, DetectionModel
-    torch.serialization.add_safe_globals([SegmentationModel, DetectionModel])
-    
     base_dir = os.path.dirname(os.path.abspath(__file__))
     
     conveyor_path = os.path.join(base_dir, 'models', 'conveyor_model.pt')
