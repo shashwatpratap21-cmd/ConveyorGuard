@@ -1,22 +1,14 @@
-import os
-
-# =========================================================================
-# --- CRITICAL STREAMLIT CLOUD FIX (LOCKFILE METHOD) ---
-# Silently swaps the crashing OpenCV version for the headless cloud version.
-# The lockfile ensures this only adds boot time once, not every time you click.
-# =========================================================================
-if not os.path.exists("cv2_setup.lock"):
-    os.system("pip uninstall -y opencv-python")
-    os.system("pip install opencv-python-headless")
-    with open("cv2_setup.lock", "w") as f:
-        f.write("done")
-
 import streamlit as st
+import os
+# We do NOT import cv2 or ultralytics until AFTER setting environment variables
+os.environ["OPENCV_VIDEOIO_PRIORITY_MSMF"] = "0"
+
 from ultralytics import YOLO
 import numpy as np
 from PIL import Image
 import cv2
 from twilio.rest import Client
+# ... rest of your code
 import datetime
 from fpdf import FPDF
 
