@@ -1,16 +1,19 @@
 import streamlit as st
-import tensorflow as tf
+from ultralytics import YOLO
 import numpy as np
 from PIL import Image
+import cv2
 import os
 from twilio.rest import Client
+import datetime
+from fpdf import FPDF
 
 # =========================================================================
 # --- TWILIO SMS CONFIGURATION ---
 # =========================================================================
 def send_emergency_sms(alert_type, details):
-    TWILIO_SID = st.secrets["TWILIO_SID"]
-    TWILIO_TOKEN = st.secrets["TWILIO_TOKEN"]
+    TWILIO_SID = st.secrets.get("TWILIO_SID", "Dummy_SID")
+    TWILIO_TOKEN = st.secrets.get("TWILIO_TOKEN", "Dummy_Token")
     TWILIO_NUMBER = "+13367042789" 
     TARGET_PHONE = "+918467068023" 
 
@@ -23,55 +26,14 @@ def send_emergency_sms(alert_type, details):
         )
         return True
     except Exception as e:
-        st.error(f"SMS Delivery Failed: {e}")
+        st.error(f"SMS Delivery Failed: Check Twilio Secrets or Network. Error: {e}")
         return False
-
-# =========================================================================
-# --- Keras Version Mismatch Hacks ---
-# =========================================================================
-@tf.keras.utils.register_keras_serializable()
-class TrueDivide(tf.keras.layers.Layer):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        
-    def __call__(self, inputs, *args, **kwargs):
-        if len(args) > 0:
-            kwargs['y'] = args[0]
-            args = tuple(args[1:])
-        return super().__call__(inputs, *args, **kwargs)
-
-    def call(self, inputs, y=127.5):
-        if isinstance(inputs, (list, tuple)) and len(inputs) == 2:
-            return inputs[0] / inputs[1]
-        return inputs / y
-
-@tf.keras.utils.register_keras_serializable()
-class Subtract(tf.keras.layers.Layer):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        
-    def __call__(self, inputs, *args, **kwargs):
-        if len(args) > 0:
-            kwargs['y'] = args[0]
-            args = tuple(args[1:])
-        return super().__call__(inputs, *args, **kwargs)
-
-    def call(self, inputs, y=1.0):
-        if isinstance(inputs, (list, tuple)) and len(inputs) == 2:
-            return inputs[0] - inputs[1]
-        return inputs - y
-
-@tf.keras.utils.register_keras_serializable()
-class SafeDense(tf.keras.layers.Dense):
-    def __init__(self, *args, **kwargs):
-        kwargs.pop('quantization_config', None)
-        super().__init__(*args, **kwargs)
 
 # =========================================================================
 # --- App Configuration ---
 # =========================================================================
 st.set_page_config(
-    page_title="ConveyorGuard", 
+    page_title="ConveyorGuard Vision", 
     page_icon="⛏️", 
     layout="wide"
 )
@@ -95,25 +57,27 @@ st.sidebar.caption("Based on Sijua Colliery average capacity of 600 TPH at ₹2,
 st.sidebar.markdown("---")
 
 # --- MAIN DASHBOARD HEADER ---
-st.title("⛏️ ConveyorGuard Dashboard")
-st.subheader("AI-Powered Inspection & Safety Management System")
+st.title("⛏️ ConveyorGuard AI Dashboard")
+st.subheader("Tata Steel Unified Multi-Agent Vision System")
 
-# --- MODEL LOADING ---
+# =========================================================================
+# --- LOAD YOLOv8 AI AGENTS ---
+# =========================================================================
 @st.cache_resource
-def load_model():
-    model_path = os.path.join(os.path.dirname(__file__), 'conveyorguard_model.h5')
-    model = tf.keras.models.load_model(
-        model_path, 
-        compile=False,
-        safe_mode=False,
-        custom_objects={'TrueDivide': TrueDivide, 'Subtract': Subtract, 'Dense': SafeDense}
-    )
-    return model
+def load_ai_agents():
+    # Look inside the 'models' folder we created on GitHub
+    base_dir = os.path.dirname(__file__)
+    
+    conveyor_agent = YOLO(os.path.join(base_dir, 'models', 'conveyor_model.pt'))
+    spillage_agent = YOLO(os.path.join(base_dir, 'models', 'spillage_model.pt'))
+    idler_agent = YOLO(os.path.join(base_dir, 'models', 'idler_model.pt'))
+    
+    return conveyor_agent, spillage_agent, idler_agent
 
 try:
-    model = load_model()
+    conveyor_agent, spillage_agent, idler_agent = load_ai_agents()
 except Exception as e:
-    st.warning("No image model found in this folder. AI Vision Tab is disabled for this test.")
+    st.warning(f"Could not load AI models. Ensure 'models' folder exists with the .pt files. Error: {e}")
 
 # --- TABS LAYOUT ---
 tab1, tab2, tab3 = st.tabs(["🚨 AI Vision Inspection", "📝 Manual Override (Codes)", "🛠️ Maintenance Scheduler"])
@@ -122,86 +86,89 @@ tab1, tab2, tab3 = st.tabs(["🚨 AI Vision Inspection", "📝 Manual Override (
 with tab1:
     st.markdown("### Upload Conveyor Belt Image")
     
-    with st.expander("📋 DGMS Pre-Inspection Safety Protocol", expanded=True):
+    with st.expander("📋 DGMS Pre-Inspection Safety Protocol", expanded=False):
         st.warning("""
         **🟡 CRITICAL UNDERGROUND SAFETY REQUIREMENTS:**
         * **Communication:** Inform the surface control room before beginning your inspection walk.
         * **Clearance:** Maintain a strict 1.5m clearance from moving idlers, tail pulleys, and the drive head.
-        * **Movement:** NEVER step over, under, or onto a moving belt. Use designated crossover bridges only.
-        * **Emergency Readiness:** Visually locate the nearest emergency pull-cord before framing your photographs.
-        * **Hazard Awareness:** Ensure cap lamps are secured and report any heavy coal dust accumulation near seized rollers immediately.
         """)
     
     # --- ENTERPRISE UPGRADE: Admin Locked Calibration ---
     st.markdown("### 🎛️ AI Calibration (Safety Officer Only)")
     
-    # Create a password input
     admin_password = st.text_input("Enter Admin Password to Unlock Calibration:", type="password")
     
-    # Check the password
     if admin_password == "dgms2026": 
         st.success("🔓 Calibration Unlocked")
-        # Slider defaults to 0.50 now
-        confidence_threshold = st.slider("Threshold", 0.10, 0.99, 0.50, 0.01)
+        confidence_threshold = st.slider("Detection Confidence Threshold", 0.10, 0.99, 0.25, 0.01)
     else:
-        st.info("🔒 System running at statutory default threshold (0.50).")
-        # The invisible default is now 0.50 to catch the anomaly!
-        confidence_threshold = 0.50  
+        st.info("🔒 System running at statutory default threshold (0.25).")
+        confidence_threshold = 0.25  
     st.markdown("---")
     
     uploaded_file = st.file_uploader("Drag and drop or click to upload", type=["jpg", "png", "jpeg"])
     
     if uploaded_file is not None:
+        # Convert uploaded image to OpenCV format
         image = Image.open(uploaded_file).convert('RGB')
+        img_array = np.array(image)
         
         col_img, col_results = st.columns([1.5, 1])
         
         with col_img:
-            st.image(image, use_container_width=True)
+            with st.spinner("AI Agents inspecting conveyor belt..."):
+                # Run Inference across all 3 models
+                res_conveyor = conveyor_agent(img_array, conf=confidence_threshold, verbose=False)
+                res_spillage = spillage_agent(img_array, conf=confidence_threshold, verbose=False)
+                res_idler = idler_agent(img_array, conf=confidence_threshold, verbose=False)
+
+                # Layer the bounding boxes on top of each other
+                annotated_img = res_conveyor[0].plot()
+                annotated_img = res_spillage[0].plot(img=annotated_img)
+                annotated_img = res_idler[0].plot(img=annotated_img)
+                
+                # YOLO plots in BGR, convert back to RGB for Streamlit
+                final_display_img = cv2.cvtColor(annotated_img, cv2.COLOR_BGR2RGB)
+                
+            st.image(final_display_img, use_container_width=True)
             
         with col_results:
             st.markdown("### Inspection Verdict:")
             
-            try:
-                img_resized = image.resize((224, 224))
-                img_array = tf.keras.preprocessing.image.img_to_array(img_resized)
-                img_array = np.expand_dims(img_array, axis=0) / 255.0
+            # Count total detections
+            total_anomalies = len(res_conveyor[0].boxes) + len(res_spillage[0].boxes) + len(res_idler[0].boxes)
+            
+            if total_anomalies > 0:  
+                st.error(f"🚨 {total_anomalies} ANOMALIES DETECTED")
+                st.error("**Action:** Dispatch maintenance team to verify bounding box zones.")
+                st.markdown("---")
                 
-                with st.spinner("AI is analyzing surface tension..."):
-                    prediction = model.predict(img_array)
-                    ai_confidence = prediction[0][0]
-                    
-                    if ai_confidence > confidence_threshold:  
-                        st.error(f"🚨 CRITICAL DAMAGE ({ai_confidence * 100:.1f}% Confidence)")
-                        st.error("**Action:** Stop conveyor immediately. Dispatch Vulcanizing team.")
-                        st.markdown("---")
-                        st.info("""
-                        **📋 DGMS Statutory Recommendation:**
-                        * Immediate physical inspection required.
-                        * Do not wait for scheduled maintenance.
-                        * Log incident in the statutory register.
-                        * Report to DGMS if belt is replaced.
-                        """)
-                    else:
-                        st.success(f"✅ NORMAL / HEALTHY LOAD")
-                        st.success(f"AI Damage Probability: {ai_confidence * 100:.1f}%. Below safety threshold.")
-                        st.markdown("---")
-                        st.info("""
-                        **📋 Routine Recommendation:**
-                        * **Next scheduled inspection:** 7 days
-                        * **Inspection frequency:** Weekly
-                        * **Standard:** DGMS Circular No. 3 of 2020
-                        """)
-                        
-            except Exception as e:
-                st.error(f"Model Error: {e}")
+                # Dynamic Breakdown
+                if len(res_conveyor[0].boxes) > 0: st.warning("⚠️ Edge alignment or debris detected.")
+                if len(res_spillage[0].boxes) > 0: st.warning("⚠️ Material spillage or foreign objects detected.")
+                if len(res_idler[0].boxes) > 0: st.warning("⚠️ Idler/Roller anomaly detected.")
+                
+                st.info("""
+                **📋 DGMS Statutory Recommendation:**
+                * Immediate physical inspection required.
+                * Log incident in the statutory register.
+                """)
+            else:
+                st.success(f"✅ NORMAL / HEALTHY LOAD")
+                st.success("AI detected zero anomalies above the threshold.")
+                st.markdown("---")
+                st.info("""
+                **📋 Routine Recommendation:**
+                * Next scheduled inspection: 7 days
+                * Standard: DGMS Circular No. 3 of 2020
+                """)
+
 # --- TAB 2: MANUAL OVERRIDE ---
 with tab2:
     st.markdown("### 🎙️ Emergency Manual Reporting")
     st.write("Use your device's **Microphone (Dictation)**. Regional languages are supported.")
     
     lang = st.radio("Response Language / उत्तर की भाषा:", ["English", "हिंदी"], horizontal=True)
-    st.info("🇮🇳 Supported inputs: English, Hindi, or Hinglish (e.g., 'belt fat gaya', 'aag lag gayi', 'paani aa raha hai')")
     
     if 'saved_report' not in st.session_state:
         st.session_state.saved_report = ""
@@ -220,189 +187,37 @@ with tab2:
     if st.session_state.saved_report:
         active_report = st.session_state.saved_report
         
-        # 1. Belt Tear (WITH HIERARCHY SMS)
-        if any(word in active_report for word in ["TEAR", "CUT", "RUPTURE", "BROKEN", "FAT", "TOOT", "FATA", "TUTA"]):
-            if lang == "English":
-                st.error("🚨 CRITICAL ALERT LOGGED: Belt Tear/Rupture detected.")
-                st.error("**Action:** Stop belt immediately. Dispatch vulcanizing crew.")
-                st.markdown("---")
-                st.markdown("### 📱 Emergency Communication Network")
-                st.info("""
-                **Alert Routing based on Incident Severity:**
-                * **Shift Engineer:** (Mandatory for all logs)
-                * **Mine Manager:** (Triggered if status is CRITICAL)
-                * **DGMS Control Room:** (Triggered if FIRE/INUNDATION)
-                """)
-                if st.button("🚨 Dispatch Alert Network", key="sms_tear_en", type="primary"):
-                    with st.spinner("Routing encrypted alerts via Twilio..."):
-                        success = send_emergency_sms("Critical Belt Rupture", active_report)
-                        if success:
-                            st.success("✅ Statutory SMS Alerts Sent Successfully!")
-            else:
-                st.error("🚨 गंभीर चेतावनी: बेल्ट फटने की सूचना मिली है।")
-                st.error("**कार्रवाई (Action):** तुरंत बेल्ट रोकें। मरम्मत टीम (Vulcanizing crew) को भेजें।")
-                st.markdown("---")
-                st.markdown("### 📱 आपातकालीन संचार नेटवर्क")
-                st.info("""
-                **घटना की गंभीरता के आधार पर अलर्ट रूटिंग:**
-                * **शिफ्ट इंजीनियर:** (सभी लॉग के लिए अनिवार्य)
-                * **खदान प्रबंधक:** (गंभीर स्थिति में ट्रिगर)
-                * **DGMS कंट्रोल रूम:** (आग/बाढ़ की स्थिति में ट्रिगर)
-                """)
-                if st.button("🚨 अलर्ट नेटवर्क भेजें", key="sms_tear_hi", type="primary"):
-                    with st.spinner("Twilio के माध्यम से अलर्ट भेजा जा रहा है..."):
-                        success = send_emergency_sms("Critical Belt Rupture", active_report)
-                        if success:
-                            st.success("✅ वैधानिक SMS अलर्ट सफलतापूर्वक भेज दिए गए!")
+        # Incident Checks
+        if any(word in active_report for word in ["TEAR", "CUT", "BROKEN", "FATA", "TUTA"]):
+            st.error("🚨 CRITICAL ALERT LOGGED: Belt Tear/Rupture detected." if lang == "English" else "🚨 गंभीर चेतावनी: बेल्ट फटने की सूचना मिली है।")
+            if st.button("🚨 Dispatch Alert Network", type="primary"):
+                send_emergency_sms("Critical Belt Rupture", active_report)
                 
-        # 2. Fire/Smoke (WITH HIERARCHY SMS)
-        elif any(word in active_report for word in ["FIRE", "SMOKE", "BURNING", "SPARK", "AAG", "DHUAN", "JALA", "SULAG"]):
-            if lang == "English":
-                st.error("🔥 FIRE EMERGENCY LOGGED: Combustion indicators detected.")
-                st.error("**CRITICAL:** Evacuate district. Turn on main suppression systems. Alert DGMS.")
-                st.markdown("---")
-                st.markdown("### 📱 Emergency Communication Network")
-                st.info("""
-                **Alert Routing based on Incident Severity:**
-                * **Shift Engineer:** (Mandatory for all logs)
-                * **Mine Manager:** (Triggered if status is CRITICAL)
-                * **DGMS Control Room:** (Triggered if FIRE/INUNDATION)
-                """)
-                if st.button("🚨 Dispatch Alert Network", key="sms_fire_en", type="primary"):
-                    with st.spinner("Routing encrypted alerts via Twilio..."):
-                        success = send_emergency_sms("Underground Fire Detected", active_report)
-                        if success:
-                            st.success("✅ Statutory SMS Alerts Sent Successfully!")
-            else:
-                st.error("🔥 आग आपातकाल: आग या धुएं की सूचना मिली है।")
-                st.error("**खतरा (CRITICAL):** तुरंत खदान खाली करें। वाटर स्प्रिंकलर चालू करें। DGMS को अलर्ट करें।")
-                st.markdown("---")
-                st.markdown("### 📱 आपातकालीन संचार नेटवर्क")
-                st.info("""
-                **घटना की गंभीरता के आधार पर अलर्ट रूटिंग:**
-                * **शिफ्ट इंजीनियर:** (सभी लॉग के लिए अनिवार्य)
-                * **खदान प्रबंधक:** (गंभीर स्थिति में ट्रिगर)
-                * **DGMS कंट्रोल रूम:** (आग/बाढ़ की स्थिति में ट्रिगर)
-                """)
-                if st.button("🚨 अलर्ट नेटवर्क भेजें", key="sms_fire_hi", type="primary"):
-                    with st.spinner("Twilio के माध्यम से अलर्ट भेजा जा रहा है..."):
-                        success = send_emergency_sms("Underground Fire Detected", active_report)
-                        if success:
-                            st.success("✅ वैधानिक SMS अलर्ट सफलतापूर्वक भेज दिए गए!")
+        elif any(word in active_report for word in ["FIRE", "SMOKE", "AAG", "DHUAN"]):
+            st.error("🔥 FIRE EMERGENCY LOGGED: Combustion indicators detected." if lang == "English" else "🔥 आग आपातकाल: आग या धुएं की सूचना मिली है।")
+            if st.button("🚨 Dispatch Alert Network", type="primary"):
+                send_emergency_sms("Underground Fire Detected", active_report)
                 
-        # 3. Spillage/Blockage
-        elif any(word in active_report for word in ["SPIL", "BLOCK", "OVERFLOW", "JAM", "GIRA", "BHAR", "RUKA", "BAND"]):
-            if lang == "English":
-                st.warning("⚠️ WARNING LOGGED: Material spillage or blockage reported.")
-                st.warning("**Action:** Dispatch cleaning crew to clear idlers and avoid friction fires.")
-            else:
-                st.warning("⚠️ चेतावनी: कोयला गिरने या बेल्ट जाम होने की सूचना है।")
-                st.warning("**कार्रवाई (Action):** सफाई टीम को भेजें ताकि घर्षण (friction) से आग न लगे।")
-
-        # 4. Water/Flooding (WITH HIERARCHY SMS)
-        elif any(word in active_report for word in ["WATER", "FLOOD", "INUND", "LEAK", "PAANI", "BAARISH", "RISSA"]):
-            if lang == "English":
-                st.error("🌊 INUNDATION RISK LOGGED: Water flooding reported.")
-                st.error("**Action:** Evacuate immediately. Activate main water pumps. Alert mine manager.")
-                st.markdown("---")
-                st.markdown("### 📱 Emergency Communication Network")
-                st.info("""
-                **Alert Routing based on Incident Severity:**
-                * **Shift Engineer:** (Mandatory for all logs)
-                * **Mine Manager:** (Triggered if status is CRITICAL)
-                * **DGMS Control Room:** (Triggered if FIRE/INUNDATION)
-                """)
-                if st.button("🚨 Dispatch Alert Network", key="sms_water_en", type="primary"):
-                    with st.spinner("Routing encrypted alerts via Twilio..."):
-                        success = send_emergency_sms("Critical Inundation Risk", active_report)
-                        if success:
-                            st.success("✅ Statutory SMS Alerts Sent Successfully!")
-            else:
-                st.error("🌊 बाढ़ का खतरा: खदान में पानी भरने की सूचना है।")
-                st.error("**कार्रवाई (Action):** तुरंत बाहर निकलें। मुख्य वाटर पंप चालू करें। खदान प्रबंधक को अलर्ट करें।")
-                st.markdown("---")
-                st.markdown("### 📱 आपातकालीन संचार नेटवर्क")
-                st.info("""
-                **घटना की गंभीरता के आधार पर अलर्ट रूटिंग:**
-                * **शिफ्ट इंजीनियर:** (सभी लॉग के लिए अनिवार्य)
-                * **खदान प्रबंधक:** (गंभीर स्थिति में ट्रिगर)
-                * **DGMS कंट्रोल रूम:** (आग/बाढ़ की स्थिति में ट्रिगर)
-                """)
-                if st.button("🚨 अलर्ट नेटवर्क भेजें", key="sms_water_hi", type="primary"):
-                    with st.spinner("Twilio के माध्यम से अलर्ट भेजा जा रहा है..."):
-                        success = send_emergency_sms("Critical Inundation Risk", active_report)
-                        if success:
-                            st.success("✅ वैधानिक SMS अलर्ट सफलतापूर्वक भेज दिए गए!")
-                
+        elif any(word in active_report for word in ["WATER", "FLOOD", "PAANI", "BAARISH"]):
+            st.error("🌊 INUNDATION RISK LOGGED: Water flooding reported." if lang == "English" else "🌊 बाढ़ का खतरा: खदान में पानी भरने की सूचना है।")
+            if st.button("🚨 Dispatch Alert Network", type="primary"):
+                send_emergency_sms("Critical Inundation Risk", active_report)
         else:
-            if lang == "English":
-                st.info("📝 General log received. Control room notified for verification.")
-            else:
-                st.info("📝 रिपोर्ट दर्ज कर ली गई है। वेरिफिकेशन के लिए कंट्रोल रूम को सूचित कर दिया गया है।")
+            st.info("📝 General log received. Control room notified." if lang == "English" else "📝 रिपोर्ट दर्ज कर ली गई है।")
         
-        # =====================================================================
-        # --- STATUTORY RECORD EXPORT (PDF UPGRADE) ---
-        # =====================================================================
+        # PDF Generator
         st.markdown("---")
-        st.markdown("### 📥 Statutory Record Management" if lang == "English" else "### 📥 वैधानिक रिकॉर्ड प्रबंधन")
-        
-        # Import inside the block just in case it's missing at the top of your file
-        import datetime
-        from fpdf import FPDF
-        
         if st.button("📥 Generate Statutory PDF" if lang == "English" else "📥 वैधानिक PDF जनरेट करें"):
             current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            
             pdf = FPDF()
             pdf.add_page()
-            
-            # Official Headers
             pdf.set_font("Arial", "B", 16)
             pdf.cell(200, 10, "CONVEYORGUARD - DGMS STATUTORY LOG", ln=True, align='C')
-            pdf.set_font("Arial", "I", 10)
-            pdf.cell(200, 10, "Sijua Colliery - Official Emergency Inspection Report", ln=True, align='C')
-            pdf.ln(10)
-            
-            # Metadata
-            pdf.set_font("Arial", "B", 12)
-            pdf.cell(40, 10, "Date & Time:", border=1)
             pdf.set_font("Arial", "", 12)
-            pdf.cell(150, 10, f" {current_time}", border=1, ln=True)
-            
-            pdf.set_font("Arial", "B", 12)
-            pdf.cell(40, 10, "Status:", border=1)
-            pdf.set_font("Arial", "B", 12)
-            pdf.cell(150, 10, " INCIDENT LOGGED", border=1, ln=True)
-            pdf.ln(10)
-            
-            # Report Content
-            pdf.set_font("Arial", "B", 12)
-            pdf.cell(200, 10, "Incident Description:", ln=True)
-            pdf.set_font("Arial", "", 12)
-            
-            # Clean text to prevent PDF rendering errors
             clean_report = active_report.replace('\n', ' ').encode('latin-1', 'replace').decode('latin-1')
             pdf.multi_cell(0, 10, clean_report)
-            pdf.ln(10)
-            
-            # Legal Notice
-            pdf.set_font("Arial", "B", 12)
-            pdf.cell(200, 10, "Legal Notice of Inspection:", ln=True)
-            pdf.set_font("Arial", "", 10)
-            legal_text = "Pursuant to DGMS Circular No. 3 of 2020, this document serves as the official statutory log for the incident reported above. Falsification of this statutory log is a punishable offense under the Mines Act, 1952."
-            pdf.multi_cell(0, 6, legal_text)
-            
-            # Signatures
-            pdf.ln(20)
-            pdf.cell(95, 10, "___________________________", align='C')
-            pdf.cell(95, 10, "___________________________", align='C', ln=True)
-            pdf.cell(95, 10, "Shift Engineer Signature", align='C')
-            pdf.cell(95, 10, "Mine Manager Signature", align='C')
-            
-            # Output PDF
             pdf_bytes = pdf.output(dest="S").encode("latin-1")
             
-            # Render the final download button
             st.download_button(
                 label="📄 Download Official DGMS Report (PDF)" if lang == "English" else "📄 आधिकारिक DGMS रिपोर्ट डाउनलोड करें (PDF)",
                 data=pdf_bytes,
@@ -410,65 +225,11 @@ with tab2:
                 mime="application/pdf",
                 type="primary"
             )
+
 # --- TAB 3: MAINTENANCE SCHEDULER ---
 with tab3:
     st.markdown("### 🛠️ Predictive Maintenance & Statutory Compliance")
-    st.info("Track statutory inspections, safety risks, and vulcanizing schedules.")
-    
     col1, col2, col3 = st.columns(3)
-    with col1:
-        st.metric(label="Next Statutory Walkthrough", value="2 Days", delta="-1 day (Urgent)", delta_color="inverse")
-    with col2:
-        st.metric(label="Idler Greasing Status", value="Overdue", delta="Action Req", delta_color="inverse")
-    with col3:
-        st.metric(label="Belt Tension & Alignment", value="Normal", delta="14 Days left", delta_color="normal")
-        
-    st.markdown("---")
-    
-    col_comp, col_risk = st.columns(2)
-    
-    with col_comp:
-        st.markdown("#### 📋 DGMS Compliance Tracker")
-        st.markdown("Routine checks per Circular No. 3 of 2020:")
-        st.checkbox("Weekly Belt Inspection (Form-4)", value=True, disabled=True)
-        st.checkbox("Emergency Pull Cord Test", value=True, disabled=True)
-        st.checkbox("Fire Extinguisher & Sprinkler Check", value=False, disabled=True) 
-        st.checkbox("Walkthrough Record Updated", value=True, disabled=True)
-
-    with col_risk:
-        st.markdown("#### ⚠️ Active Safety Risk Panel")
-        st.markdown("Current operational hazards:")
-        st.error("**🔥 Fire Risk: HIGH** (Coal dust accumulation noted near tail pulley)")
-        st.warning("**👷 Personnel Risk: MEDIUM** (Clearance zone restricted in Sector 4)")
-        st.success("**⚙️ Belt Failure Risk: LOW** (No immediate structural tearing detected)")
-        
-    st.markdown("---")
-    
-    st.markdown("#### 📅 Schedule Repair / Vulcanizing")
-    
-    with st.form("maintenance_form"):
-        task = st.selectbox("Select Maintenance Task:", [
-            "Hot Vulcanizing (Belt Splicing)", 
-            "Idler/Roller Replacement", 
-            "Drive Motor Alignment", 
-            "Tail Pulley Cleaning",
-            "Fire Extinguisher Replacement",
-            "General Statutory Inspection"
-        ])
-        
-        col_date, col_team = st.columns(2)
-        with col_date:
-            scheduled_date = st.date_input("Scheduled Date")
-        with col_team:
-            assigned_to = st.text_input("Assigned Team / Contractor")
-            
-        comments = st.text_area("Additional Engineer Comments:")
-        
-        submitted = st.form_submit_button("💾 Log Maintenance Task", type="primary")
-        
-        if submitted:
-            if assigned_to == "":
-                st.error("Please assign a team before logging the task.")
-            else:
-                st.success(f"✅ {task} successfully scheduled for {scheduled_date}.")
-                st.info(f"Notification sent to: {assigned_to}")
+    col1.metric(label="Next Statutory Walkthrough", value="2 Days", delta="-1 day (Urgent)", delta_color="inverse")
+    col2.metric(label="Idler Greasing Status", value="Overdue", delta="Action Req", delta_color="inverse")
+    col3.metric(label="Belt Tension & Alignment", value="Normal", delta="14 Days left", delta_color="normal")
