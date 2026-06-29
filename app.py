@@ -106,8 +106,8 @@ tab1, tab2, tab3 = st.tabs(["🚨 AI Vision Inspection", "📝 Manual Override (
 with tab1:
     st.markdown("### Upload Conveyor Belt Image")
     
-  with st.expander("📋 DGMS Pre-Inspection Safety Protocol", expanded=False):
-    st.markdown("""
+    with st.expander("📋 DGMS Pre-Inspection Safety Protocol", expanded=False):
+        st.markdown("""...""", unsafe_allow_html=True)
     <div style="
         background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
         border-left: 4px solid #f39c12;
