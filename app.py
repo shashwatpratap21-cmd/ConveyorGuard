@@ -174,10 +174,16 @@ with tab1:
         col_img, col_results = st.columns([1.5, 1])
 
         with col_img:
-            with st.spinner("AI Agents inspecting conveyor belt..."):
-                res_conveyor = conveyor_agent(img_array, conf=confidence_threshold, verbose=False)
-                res_spillage = spillage_agent(img_array, conf=confidence_threshold, verbose=False)
-                res_idler = idler_agent(img_array, conf=confidence_threshold, verbose=False)
+with st.spinner("AI Agents inspecting conveyor belt..."):
+    try:
+        conveyor_agent
+    except NameError:
+        st.error("AI models failed to load. Check logs via 'Manage app' for details.")
+        st.stop()
+    
+    res_conveyor = conveyor_agent(img_array, conf=confidence_threshold, verbose=False)
+    res_spillage = spillage_agent(img_array, conf=confidence_threshold, verbose=False)
+    res_idler = idler_agent(img_array, conf=confidence_threshold, verbose=False)
 
                 annotated_img = res_conveyor[0].plot()
                 annotated_img = res_spillage[0].plot(img=annotated_img)
