@@ -5,5 +5,5 @@ pillow==9.5.0
 streamlit==1.28.0
 twilio==8.5.0
 fpdf==1.7.2
-torch==2.5.1
-torchvision==0.20.1
+torch==2.0.1
+torchvision==0.15.2
