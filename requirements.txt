@@ -1,10 +1,7 @@
-# Core AI and Vision
 ultralytics
-opencv-python
+opencv-python-headless
 numpy
 pillow
-
-# Optional Features (Leave these if you plan to build them!)
 streamlit
 twilio
 fpdf
