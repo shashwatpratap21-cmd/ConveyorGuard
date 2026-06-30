@@ -88,17 +88,12 @@ st.subheader("Tata Steel Unified Multi-Agent Vision System")
 def load_ai_agents():
     base_dir = os.path.dirname(os.path.abspath(__file__))
 
-    conveyor_path = os.path.join(base_dir, "models", "conveyor_model.pt")
-    spillage_path = os.path.join(base_dir, "models", "spillage_model.pt")
-    idler_path = os.path.join(base_dir, "models", "idler_model.pt")
-
-    # Fallback if models are uploaded directly in root folder
-    if not os.path.exists(conveyor_path):
-        conveyor_path = os.path.join(base_dir, "conveyor_model.pt")
-        spillage_path = os.path.join(base_dir, "spillage_model.pt")
-        idler_path = os.path.join(base_dir, "idler_model.pt")
+    conveyor_path = os.path.join(base_dir, "conveyor_model.pt")
+    spillage_path = os.path.join(base_dir, "spillage_model.pt")
+    idler_path = os.path.join(base_dir, "idler_model.pt")
 
     missing = []
+
     for path in [conveyor_path, spillage_path, idler_path]:
         if not os.path.exists(path):
             missing.append(path)
@@ -112,7 +107,6 @@ def load_ai_agents():
 
     return conveyor_agent, spillage_agent, idler_agent
 
-
 conveyor_agent = None
 spillage_agent = None
 idler_agent = None
@@ -125,11 +119,6 @@ try:
 except Exception as e:
     model_error_message = str(e)
     st.error(f"⚠️ REAL MODEL LOADING ERROR: {model_error_message}")
-
-
-# =========================================================================
-# --- FILTERING AND DRAWING HELPERS ---
-# =========================================================================
 
 # =========================================================================
 # --- FILTERING AND DRAWING HELPERS ---
