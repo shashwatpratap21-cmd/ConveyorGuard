@@ -113,14 +113,16 @@ def load_all_ai_agents():
     idler_agent = YOLO(idler_path)
 
     return conveyor_current, conveyor_old, conveyor_seg, spillage_agent, idler_agent
-conveyor_agent = None
+conveyor_current = None
+conveyor_old = None
+conveyor_seg = None
 spillage_agent = None
 idler_agent = None
 models_loaded = False
 model_error_message = ""
 
 try:
-    conveyor_agent, spillage_agent, idler_agent = load_ai_agents()
+    conveyor_current, conveyor_old, conveyor_seg, spillage_agent, idler_agent = load_all_ai_agents()
     models_loaded = True
 except Exception as e:
     model_error_message = str(e)
