@@ -605,7 +605,7 @@ with tab1:
 
             st.image(annotated_img, use_container_width=True)
 
-        with col_results:
+                with col_results:
             st.markdown("### Inspection Verdict:")
 
             all_dets = conveyor_dets + spillage_dets + idler_dets
@@ -616,16 +616,37 @@ with tab1:
                 st.write("Confidence threshold:", confidence_threshold)
 
                 if res_conveyor is not None:
-                   st.write("Raw conveyor detections before filtering:", get_raw_detections(res_conveyor))
-                    st.write("Accepted conveyor detections after filtering:", conveyor_dets)
+                    st.write("Conveyor model classes:", res_conveyor.names)
+                    st.write(
+                        "Raw conveyor detections before filtering:",
+                        get_raw_detections(res_conveyor)
+                    )
+                    st.write(
+                        "Accepted conveyor detections after filtering:",
+                        conveyor_dets
+                    )
 
                 if res_spillage is not None:
                     st.write("Spillage model classes:", res_spillage.names)
-                    st.write("Accepted spillage detections:", spillage_dets)
+                    st.write(
+                        "Raw spillage detections before filtering:",
+                        get_raw_detections(res_spillage)
+                    )
+                    st.write(
+                        "Accepted spillage detections after filtering:",
+                        spillage_dets
+                    )
 
                 if res_idler is not None:
                     st.write("Idler model classes:", res_idler.names)
-                    st.write("Accepted idler detections:", idler_dets)
+                    st.write(
+                        "Raw idler detections before filtering:",
+                        get_raw_detections(res_idler)
+                    )
+                    st.write(
+                        "Accepted idler detections after filtering:",
+                        idler_dets
+                    )
 
             if total_anomalies > 0:
                 st.error(f"🚨 {total_anomalies} ANOMALIES DETECTED")
@@ -642,9 +663,11 @@ with tab1:
                     "- Log incident in statutory register.\n"
                     "- Stop conveyor if defect is severe."
                 )
+
             else:
                 st.success("✅ NORMAL / HEALTHY LOAD")
                 st.success("AI detected zero accepted anomalies above the threshold.")
+
                 st.info(
                     "📋 Routine Recommendation:\n"
                     "- Continue monitoring.\n"
