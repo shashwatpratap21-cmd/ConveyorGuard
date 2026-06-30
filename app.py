@@ -342,11 +342,6 @@ def run_filtered_model(
 
 
 def get_raw_detections(result):
-    """
-    Shows what YOLO detected before our filtering.
-    This helps identify whether the model missed the defect or the filter rejected it.
-    """
-
     try:
         if result is None or result.boxes is None:
             return []
@@ -363,19 +358,16 @@ def get_raw_detections(result):
             else:
                 class_name = names[cls_id]
 
-            raw.append(
-                {
-                    "class": class_name,
-                    "confidence": round(conf, 3),
-                    "confidence_percent": round(conf * 100, 1),
-                }
-            )
+            raw.append({
+                "class": class_name,
+                "confidence": round(conf, 3),
+                "confidence_percent": round(conf * 100, 1)
+            })
 
         return raw
 
     except Exception as e:
         return [{"debug_error": str(e)}]
-
 
 def combine_images(base_img, overlay_img):
     """
