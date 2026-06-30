@@ -131,31 +131,107 @@ except Exception as e:
 # --- FILTERING AND DRAWING HELPERS ---
 # =========================================================================
 
-BELT_ALLOWED = ["tear", "hole", "cut", "rip", "puncture", "fissure", "crack"]
-BELT_BLOCKED = ["impact", "roller", "idler", "pole", "person", "human", "coal", "rock", "load"]
+# =========================================================================
+# --- FILTERING AND DRAWING HELPERS ---
+# =========================================================================
 
-SPILLAGE_ALLOWED = ["garbage", "block", "iron", "brazing", "foreign", "spillage", "debris", "object"]
-SPILLAGE_BLOCKED = ["person", "human", "roller", "idler", "pole"]
+# Belt surface model classes from your debug:
+# 0: Hole
+# 1: Human
+# 2: Other Objects
+# 3: Puncture
+# 4: Roller
+# 5: Tear
+# 6: impact damage
+# 7: patch work
 
-IDLER_ALLOWED = ["idler", "roller", "pole", "missing", "damaged", "damage", "misalignment", "desalineamiento"]
-IDLER_BLOCKED = ["person", "human"]
+BELT_ALLOWED = [
+    "hole",
+    "puncture",
+    "tear",
+    "impact damage",
+    "impact",
+    "patch work",
+    "patch",
+    "damage",
+    "crack",
+    "fissure",
+    "burn",
+    "brulure",
+    "wear",
+    "abrasion"
+]
+
+BELT_BLOCKED = [
+    "human",
+    "person",
+    "roller",
+    "idler",
+    "pole",
+    "other objects",
+    "other object",
+    "coal",
+    "rock",
+    "load"
+]
+
+SPILLAGE_ALLOWED = [
+    "garbage",
+    "block",
+    "iron",
+    "brazing",
+    "foreign",
+    "foreign object",
+    "spillage",
+    "debris"
+]
+
+SPILLAGE_BLOCKED = [
+    "person",
+    "human",
+    "roller",
+    "idler",
+    "pole",
+    "other objects",
+    "other object"
+]
+
+IDLER_ALLOWED = [
+    "idler",
+    "roller",
+    "pole",
+    "missing",
+    "damaged",
+    "damage",
+    "misalignment",
+    "desalineamiento"
+]
+
+IDLER_BLOCKED = [
+    "person",
+    "human"
+]
 
 
 def model_names(model):
     try:
         names = model.names
+
         if isinstance(names, dict):
             return names
+
         return {i: name for i, name in enumerate(names)}
+
     except Exception:
         return {}
 
 
 def class_is_allowed(class_name, allowed_keywords=None, blocked_keywords=None):
-    name = class_name.lower()
+    name = class_name.lower().strip()
 
-    if blocked_keywords and any(word in name for word in blocked_keywords):
-        return False
+    if blocked_keywords:
+        if any(word in name for word in blocked_keywords):
+            return False
 
     if allowed_keywords:
         return any(word in name for word in allowed_keywords)
@@ -167,11 +243,29 @@ def draw_label(img, text, x1, y1, color):
     font = cv2.FONT_HERSHEY_SIMPLEX
     font_scale = 0.6
     thickness = 2
-    (tw, th), _ = cv2.getTextSize(text, font, font_scale, thickness)
 
-    y1 = max(y1, th + 8)
-    cv2.rectangle(img, (x1, y1 - th - 8), (x1 + tw + 8, y1), color, -1)
-    cv2.putText(img, text, (x1 + 4, y1 - 5), font, font_scale, (255, 255, 255), thickness)
+    # Correct OpenCV text size syntax
+    (tw, th), baseline = cv2.getTextSize(text, font, font_scale, thickness)
+
+    y1 = max(y1, th + 10)
+
+    cv2.rectangle(
+        img,
+        (x1, y1 - th - 10),
+        (x1 + tw + 10, y1),
+        color,
+        -1
+    )
+
+    cv2.putText(
+        img,
+        text,
+        (x1 + 5, y1 - 6),
+        font,
+        font_scale,
+        (255, 255, 255),
+        thickness
+    )
 
 
 def run_filtered_model(
@@ -185,10 +279,15 @@ def run_filtered_model(
 ):
     """
     Runs YOLO, filters unwanted classes, and draws only accepted detections.
-    This prevents belt mode from showing humans/rollers/poles/impact damage.
+
+    Important:
+    This prevents Belt Surface Damage mode from showing Human / Roller / Other Objects.
     """
+
     result = model(image_array, conf=confidence, verbose=False)[0]
+
     annotated = image_array.copy()
+    overlay = annotated.copy()
     detections = []
 
     names = result.names
@@ -198,13 +297,16 @@ def run_filtered_model(
     if boxes is None:
         return result, annotated, detections
 
-    overlay = annotated.copy()
-
     for i, box in enumerate(boxes):
         cls_id = int(box.cls[0])
         conf = float(box.conf[0])
-        class_name = names.get(cls_id, str(cls_id)) if isinstance(names, dict) else names[cls_id]
 
+        if isinstance(names, dict):
+            class_name = names.get(cls_id, str(cls_id))
+        else:
+            class_name = names[cls_id]
+
+        # Filter unwanted classes
         if not class_is_allowed(class_name, allowed_keywords, blocked_keywords):
             continue
 
@@ -219,6 +321,7 @@ def run_filtered_model(
         # Draw bounding box
         cv2.rectangle(annotated, (x1, y1), (x2, y2), color, 2)
 
+        # Better label format: Tear 25% instead of Tear 0.25
         label = f"{class_name.title()} {conf * 100:.0f}%"
         draw_label(annotated, label, x1, y1, color)
 
@@ -227,29 +330,79 @@ def run_filtered_model(
                 "model": model_label,
                 "class": class_name,
                 "confidence": conf,
+                "confidence_percent": round(conf * 100, 1),
                 "box": [x1, y1, x2, y2],
             }
         )
 
     # Transparent mask overlay
     annotated = cv2.addWeighted(overlay, 0.35, annotated, 0.65, 0)
+
     return result, annotated, detections
 
 
+def get_raw_detections(result):
+    """
+    Shows what YOLO detected before our filtering.
+    This helps identify whether the model missed the defect or the filter rejected it.
+    """
+
+    try:
+        if result is None or result.boxes is None:
+            return []
+
+        raw = []
+        names = result.names
+
+        for box in result.boxes:
+            cls_id = int(box.cls[0])
+            conf = float(box.conf[0])
+
+            if isinstance(names, dict):
+                class_name = names.get(cls_id, str(cls_id))
+            else:
+                class_name = names[cls_id]
+
+            raw.append(
+                {
+                    "class": class_name,
+                    "confidence": round(conf, 3),
+                    "confidence_percent": round(conf * 100, 1),
+                }
+            )
+
+        return raw
+
+    except Exception as e:
+        return [{"debug_error": str(e)}]
+
+
 def combine_images(base_img, overlay_img):
-    """Keeps already drawn annotations by returning the latest annotated image."""
+    """
+    Placeholder helper.
+    Currently returns the latest annotated image.
+    """
     return overlay_img
 
 
 def recommended_confidence(mode):
+    """
+    Different models need different thresholds.
+
+    Belt damage is kept sensitive because early tear/burn/patch warnings may appear
+    at lower confidence.
+    """
+
     if mode == "Belt Surface Damage":
-        return 0.15
+        return 0.10
+
     if mode == "Spillage / Foreign Object":
         return 0.55
+
     if mode == "Idler / Roller Mechanical Health":
         return 0.60
-    return 0.45
 
+    return 0.45
 
 # =========================================================================
 # --- TABS ---
