@@ -1,16 +1,17 @@
 import os
+import datetime
+
 import streamlit as st
 
-# OpenCV cloud setting
+# OpenCV cloud setting for Streamlit Cloud
 os.environ["OPENCV_VIDEOIO_PRIORITY_MSMF"] = "0"
 
-from ultralytics import YOLO
+import cv2
 import numpy as np
 from PIL import Image
-import cv2
-from twilio.rest import Client
-import datetime
 from fpdf import FPDF
+from twilio.rest import Client
+from ultralytics import YOLO
 
 
 # =========================================================================
@@ -26,9 +27,14 @@ def send_emergency_sms(alert_type, details):
     try:
         client = Client(TWILIO_SID, TWILIO_TOKEN)
         client.messages.create(
-            body=f"🚨 CONVEYORGUARD ALERT: {alert_type}\nLocation: Sijua Colliery\nDetails: {details}\nAction Required Immediately.",
+            body=(
+                f"CONVEYORGUARD ALERT: {alert_type}\n"
+                f"Location: Sijua Colliery\n"
+                f"Details: {details}\n"
+                f"Action Required Immediately."
+            ),
             from_=TWILIO_NUMBER,
-            to=TARGET_PHONE
+            to=TARGET_PHONE,
         )
         return True
     except Exception as e:
@@ -43,34 +49,20 @@ def send_emergency_sms(alert_type, details):
 st.set_page_config(
     page_title="ConveyorGuard Vision",
     page_icon="⛏️",
-    layout="wide"
+    layout="wide",
 )
 
 st.sidebar.header("📉 Economic Impact Calculator")
 st.sidebar.markdown("Estimate financial loss during downtime.")
 
 capacity = st.sidebar.number_input(
-    "Conveyor Capacity (TPH)",
-    min_value=100,
-    max_value=5000,
-    value=600,
-    step=50
+    "Conveyor Capacity (TPH)", min_value=100, max_value=5000, value=600, step=50
 )
-
 coal_price = st.sidebar.number_input(
-    "Coal Price (₹/t)",
-    min_value=1000,
-    max_value=10000,
-    value=2200,
-    step=100
+    "Coal Price (₹/t)", min_value=1000, max_value=10000, value=2200, step=100
 )
-
 downtime = st.sidebar.number_input(
-    "Predicted Downtime (h)",
-    min_value=0.5,
-    max_value=24.0,
-    value=3.0,
-    step=0.5
+    "Predicted Downtime (h)", min_value=0.5, max_value=24.0, value=3.0, step=0.5
 )
 
 hourly_loss_lakhs = (capacity * coal_price) / 100000
@@ -79,7 +71,9 @@ total_loss_lakhs = hourly_loss_lakhs * downtime
 st.sidebar.markdown("---")
 st.sidebar.subheader("Estimated Production Loss:")
 st.sidebar.error(f"🚨 ₹ {total_loss_lakhs:.2f} Lakh")
-st.sidebar.caption("Based on Sijua Colliery average capacity of 600 TPH at ₹2,200/tonne coal price.")
+st.sidebar.caption(
+    "Based on Sijua Colliery average capacity of 600 TPH at ₹2,200/tonne coal price."
+)
 st.sidebar.markdown("---")
 
 st.title("⛏️ ConveyorGuard AI Dashboard")
@@ -98,11 +92,19 @@ def load_ai_agents():
     spillage_path = os.path.join(base_dir, "models", "spillage_model.pt")
     idler_path = os.path.join(base_dir, "models", "idler_model.pt")
 
-    # fallback if models are uploaded directly in root folder
+    # Fallback if models are uploaded directly in root folder
     if not os.path.exists(conveyor_path):
         conveyor_path = os.path.join(base_dir, "conveyor_model.pt")
         spillage_path = os.path.join(base_dir, "spillage_model.pt")
         idler_path = os.path.join(base_dir, "idler_model.pt")
+
+    missing = []
+    for path in [conveyor_path, spillage_path, idler_path]:
+        if not os.path.exists(path):
+            missing.append(path)
+
+    if missing:
+        raise FileNotFoundError("Missing model files: " + ", ".join(missing))
 
     conveyor_agent = YOLO(conveyor_path)
     spillage_agent = YOLO(spillage_path)
@@ -126,40 +128,136 @@ except Exception as e:
 
 
 # =========================================================================
-# --- HELPER FUNCTIONS ---
+# --- FILTERING AND DRAWING HELPERS ---
 # =========================================================================
 
-def count_detections(result):
+BELT_ALLOWED = ["tear", "hole", "cut", "rip", "puncture", "fissure", "crack"]
+BELT_BLOCKED = ["impact", "roller", "idler", "pole", "person", "human", "coal", "rock", "load"]
+
+SPILLAGE_ALLOWED = ["garbage", "block", "iron", "brazing", "foreign", "spillage", "debris", "object"]
+SPILLAGE_BLOCKED = ["person", "human", "roller", "idler", "pole"]
+
+IDLER_ALLOWED = ["idler", "roller", "pole", "missing", "damaged", "damage", "misalignment", "desalineamiento"]
+IDLER_BLOCKED = ["person", "human"]
+
+
+def model_names(model):
     try:
-        if result is None:
-            return 0
-
-        if result[0].masks is not None:
-            return len(result[0].masks)
-
-        if result[0].boxes is not None:
-            return len(result[0].boxes)
-
-        return 0
+        names = model.names
+        if isinstance(names, dict):
+            return names
+        return {i: name for i, name in enumerate(names)}
     except Exception:
-        return 0
+        return {}
 
 
-def run_single_model(model, image_array, confidence):
-    result = model(image_array, conf=confidence, verbose=False)
-    annotated = result[0].plot()
-    return result, annotated
+def class_is_allowed(class_name, allowed_keywords=None, blocked_keywords=None):
+    name = class_name.lower()
+
+    if blocked_keywords and any(word in name for word in blocked_keywords):
+        return False
+
+    if allowed_keywords:
+        return any(word in name for word in allowed_keywords)
+
+    return True
+
+
+def draw_label(img, text, x1, y1, color):
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    font_scale = 0.6
+    thickness = 2
+    (tw, th), _ = cv2.getTextSize(text, font, font_scale, thickness)
+
+    y1 = max(y1, th + 8)
+    cv2.rectangle(img, (x1, y1 - th - 8), (x1 + tw + 8, y1), color, -1)
+    cv2.putText(img, text, (x1 + 4, y1 - 5), font, font_scale, (255, 255, 255), thickness)
+
+
+def run_filtered_model(
+    model,
+    image_array,
+    confidence,
+    allowed_keywords,
+    blocked_keywords,
+    model_label,
+    color=(255, 0, 0),
+):
+    """
+    Runs YOLO, filters unwanted classes, and draws only accepted detections.
+    This prevents belt mode from showing humans/rollers/poles/impact damage.
+    """
+    result = model(image_array, conf=confidence, verbose=False)[0]
+    annotated = image_array.copy()
+    detections = []
+
+    names = result.names
+    boxes = result.boxes
+    masks_xy = result.masks.xy if result.masks is not None else None
+
+    if boxes is None:
+        return result, annotated, detections
+
+    overlay = annotated.copy()
+
+    for i, box in enumerate(boxes):
+        cls_id = int(box.cls[0])
+        conf = float(box.conf[0])
+        class_name = names.get(cls_id, str(cls_id)) if isinstance(names, dict) else names[cls_id]
+
+        if not class_is_allowed(class_name, allowed_keywords, blocked_keywords):
+            continue
+
+        x1, y1, x2, y2 = box.xyxy[0].cpu().numpy().astype(int).tolist()
+
+        # Draw segmentation mask if available
+        if masks_xy is not None and i < len(masks_xy):
+            pts = masks_xy[i].astype(np.int32)
+            cv2.fillPoly(overlay, [pts], color)
+            cv2.polylines(annotated, [pts], True, color, 2)
+
+        # Draw bounding box
+        cv2.rectangle(annotated, (x1, y1), (x2, y2), color, 2)
+
+        label = f"{class_name.title()} {conf * 100:.0f}%"
+        draw_label(annotated, label, x1, y1, color)
+
+        detections.append(
+            {
+                "model": model_label,
+                "class": class_name,
+                "confidence": conf,
+                "box": [x1, y1, x2, y2],
+            }
+        )
+
+    # Transparent mask overlay
+    annotated = cv2.addWeighted(overlay, 0.35, annotated, 0.65, 0)
+    return result, annotated, detections
+
+
+def combine_images(base_img, overlay_img):
+    """Keeps already drawn annotations by returning the latest annotated image."""
+    return overlay_img
+
+
+def recommended_confidence(mode):
+    if mode == "Belt Surface Damage":
+        return 0.20
+    if mode == "Spillage / Foreign Object":
+        return 0.55
+    if mode == "Idler / Roller Mechanical Health":
+        return 0.60
+    return 0.45
 
 
 # =========================================================================
 # --- TABS ---
 # =========================================================================
 
-tab1, tab2, tab3 = st.tabs([
-    "🚨 AI Vision Inspection",
-    "📝 Manual Override (Codes)",
-    "🛠️ Maintenance Scheduler"
-])
+tab1, tab2, tab3 = st.tabs(
+    ["🚨 AI Vision Inspection", "📝 Manual Override (Codes)", "🛠️ Maintenance Scheduler"]
+)
 
 
 # =========================================================================
@@ -179,7 +277,7 @@ with tab1:
                 As per Coal Mines Regulation 2017 & DGMS Circular No. 3 of 2020</p>
             </div>
             """,
-            unsafe_allow_html=True
+            unsafe_allow_html=True,
         )
 
         col_a, col_b = st.columns(2)
@@ -197,7 +295,7 @@ with tab1:
                     Maintain a strict <b>1.5m clearance</b> from moving idlers, tail pulleys, and the drive head.</p>
                 </div>
                 """,
-                unsafe_allow_html=True
+                unsafe_allow_html=True,
             )
 
         with col_b:
@@ -213,7 +311,7 @@ with tab1:
                     Visually locate the nearest <b>emergency pull-cord</b> before beginning your inspection.</p>
                 </div>
                 """,
-                unsafe_allow_html=True
+                unsafe_allow_html=True,
             )
 
         st.markdown("<br>", unsafe_allow_html=True)
@@ -227,28 +325,8 @@ with tab1:
                 </span>
             </div>
             """,
-            unsafe_allow_html=True
+            unsafe_allow_html=True,
         )
-
-    st.markdown("### 🎛️ AI Calibration")
-
-    admin_password = st.text_input(
-        "Enter Admin Password to Unlock Calibration:",
-        type="password"
-    )
-
-    if admin_password == "dgms2026":
-        st.success("🔓 Calibration Unlocked")
-        confidence_threshold = st.slider(
-            "Detection Confidence Threshold",
-            0.10,
-            0.99,
-            0.25,
-            0.01
-        )
-    else:
-        st.info("🔒 System running at statutory default threshold (0.25).")
-        confidence_threshold = 0.25
 
     st.markdown("### 🧠 Select Inspection View")
 
@@ -258,19 +336,41 @@ with tab1:
             "Belt Surface Damage",
             "Spillage / Foreign Object",
             "Idler / Roller Mechanical Health",
-            "Full Multi-Agent Scan"
-        ]
+            "Full Multi-Agent Scan",
+        ],
     )
 
+    if inspection_mode == "Belt Surface Damage":
+        st.warning(
+            "Use Belt Surface Damage only when belt rubber is visible. If coal/rocks cover the belt, use Spillage / Foreign Object mode."
+        )
+
     st.caption(
-        "Use Full Multi-Agent Scan only for final demo. For normal testing, select the specific view to reduce false detections."
+        "False detections are reduced by running only the correct specialist model and filtering unwanted classes."
     )
+
+    st.markdown("### 🎛️ AI Calibration")
+    default_conf = recommended_confidence(inspection_mode)
+
+    admin_password = st.text_input("Enter Admin Password to Unlock Calibration:", type="password")
+
+    if admin_password == "dgms2026":
+        st.success("🔓 Calibration Unlocked")
+        confidence_threshold = st.slider(
+            "Detection Confidence Threshold",
+            0.05,
+            0.99,
+            default_conf,
+            0.01,
+        )
+    else:
+        st.info(f"🔒 System running at recommended threshold ({default_conf:.2f}).")
+        confidence_threshold = default_conf
 
     st.markdown("---")
 
     uploaded_file = st.file_uploader(
-        "Drag and drop or click to upload",
-        type=["jpg", "png", "jpeg"]
+        "Drag and drop or click to upload", type=["jpg", "png", "jpeg"]
     )
 
     if uploaded_file is not None:
@@ -286,114 +386,110 @@ with tab1:
 
         with col_img:
             with st.spinner("AI Agents inspecting conveyor belt..."):
-
                 res_conveyor = None
                 res_spillage = None
                 res_idler = None
 
+                conveyor_dets = []
+                spillage_dets = []
+                idler_dets = []
+
+                annotated_img = img_array.copy()
+
                 if inspection_mode == "Belt Surface Damage":
-                    res_conveyor, annotated_img = run_single_model(
+                    res_conveyor, annotated_img, conveyor_dets = run_filtered_model(
                         conveyor_agent,
                         img_array,
-                        confidence_threshold
+                        confidence_threshold,
+                        BELT_ALLOWED,
+                        BELT_BLOCKED,
+                        "Belt Surface Damage",
+                        color=(255, 70, 70),
                     )
 
                 elif inspection_mode == "Spillage / Foreign Object":
-                    res_spillage, annotated_img = run_single_model(
+                    res_spillage, annotated_img, spillage_dets = run_filtered_model(
                         spillage_agent,
                         img_array,
-                        max(confidence_threshold, 0.55)
+                        confidence_threshold,
+                        SPILLAGE_ALLOWED,
+                        SPILLAGE_BLOCKED,
+                        "Spillage / Foreign Object",
+                        color=(255, 165, 0),
                     )
 
                 elif inspection_mode == "Idler / Roller Mechanical Health":
-                    res_idler, annotated_img = run_single_model(
+                    res_idler, annotated_img, idler_dets = run_filtered_model(
                         idler_agent,
                         img_array,
-                        max(confidence_threshold, 0.60)
+                        confidence_threshold,
+                        IDLER_ALLOWED,
+                        IDLER_BLOCKED,
+                        "Idler / Roller Mechanical Health",
+                        color=(80, 180, 255),
                     )
 
                 else:
-                    res_conveyor = conveyor_agent(
-                        img_array,
-                        conf=confidence_threshold,
-                        verbose=False
+                    res_conveyor, annotated_img, conveyor_dets = run_filtered_model(
+                        conveyor_agent,
+                        annotated_img,
+                        max(confidence_threshold, 0.20),
+                        BELT_ALLOWED,
+                        BELT_BLOCKED,
+                        "Belt Surface Damage",
+                        color=(255, 70, 70),
+                    )
+                    res_spillage, annotated_img, spillage_dets = run_filtered_model(
+                        spillage_agent,
+                        annotated_img,
+                        max(confidence_threshold, 0.55),
+                        SPILLAGE_ALLOWED,
+                        SPILLAGE_BLOCKED,
+                        "Spillage / Foreign Object",
+                        color=(255, 165, 0),
+                    )
+                    res_idler, annotated_img, idler_dets = run_filtered_model(
+                        idler_agent,
+                        annotated_img,
+                        max(confidence_threshold, 0.60),
+                        IDLER_ALLOWED,
+                        IDLER_BLOCKED,
+                        "Idler / Roller Mechanical Health",
+                        color=(80, 180, 255),
                     )
 
-                    res_spillage = spillage_agent(
-                        img_array,
-                        conf=max(confidence_threshold, 0.55),
-                        verbose=False
-                    )
-
-                    res_idler = idler_agent(
-                        img_array,
-                        conf=max(confidence_threshold, 0.60),
-                        verbose=False
-                    )
-
-                    annotated_img = res_conveyor[0].plot()
-                    annotated_img = res_spillage[0].plot(img=annotated_img)
-                    annotated_img = res_idler[0].plot(img=annotated_img)
-
-                final_display_img = cv2.cvtColor(annotated_img, cv2.COLOR_BGR2RGB)
-
-            st.image(final_display_img, use_container_width=True)
+            st.image(annotated_img, use_container_width=True)
 
         with col_results:
             st.markdown("### Inspection Verdict:")
 
+            all_dets = conveyor_dets + spillage_dets + idler_dets
+            total_anomalies = len(all_dets)
+
             with st.expander("🔍 Debug: Model Raw Output"):
+                st.write("Inspection mode:", inspection_mode)
+                st.write("Confidence threshold:", confidence_threshold)
+
                 if res_conveyor is not None:
-                    st.write("Conveyor model classes:", res_conveyor[0].names)
-                    st.write(
-                        "Conveyor boxes:",
-                        len(res_conveyor[0].boxes) if res_conveyor[0].boxes is not None else 0
-                    )
-                    st.write(
-                        "Conveyor masks:",
-                        len(res_conveyor[0].masks) if res_conveyor[0].masks is not None else 0
-                    )
+                    st.write("Conveyor model classes:", res_conveyor.names)
+                    st.write("Accepted conveyor detections:", conveyor_dets)
 
                 if res_spillage is not None:
-                    st.write("Spillage model classes:", res_spillage[0].names)
-                    st.write(
-                        "Spillage boxes:",
-                        len(res_spillage[0].boxes) if res_spillage[0].boxes is not None else 0
-                    )
-                    st.write(
-                        "Spillage masks:",
-                        len(res_spillage[0].masks) if res_spillage[0].masks is not None else 0
-                    )
+                    st.write("Spillage model classes:", res_spillage.names)
+                    st.write("Accepted spillage detections:", spillage_dets)
 
                 if res_idler is not None:
-                    st.write("Idler model classes:", res_idler[0].names)
-                    st.write(
-                        "Idler boxes:",
-                        len(res_idler[0].boxes) if res_idler[0].boxes is not None else 0
-                    )
-                    st.write(
-                        "Idler masks:",
-                        len(res_idler[0].masks) if res_idler[0].masks is not None else 0
-                    )
-
-            conveyor_count = count_detections(res_conveyor)
-            spillage_count = count_detections(res_spillage)
-            idler_count = count_detections(res_idler)
-
-            total_anomalies = conveyor_count + spillage_count + idler_count
+                    st.write("Idler model classes:", res_idler.names)
+                    st.write("Accepted idler detections:", idler_dets)
 
             if total_anomalies > 0:
                 st.error(f"🚨 {total_anomalies} ANOMALIES DETECTED")
-                st.error("**Action:** Dispatch maintenance team to verify zones.")
+                st.error("Action: Dispatch maintenance team to verify zones.")
 
-                if conveyor_count > 0:
-                    st.warning("⚠️ Belt surface damage / tear / hole detected.")
-
-                if spillage_count > 0:
-                    st.warning("⚠️ Spillage or foreign object detected.")
-
-                if idler_count > 0:
-                    st.warning("⚠️ Idler / roller / mechanical anomaly detected.")
+                for det in all_dets:
+                    st.warning(
+                        f"{det['model']}: {det['class']} detected with {det['confidence'] * 100:.1f}% confidence."
+                    )
 
                 st.info(
                     "📋 DGMS Recommendation:\n"
@@ -401,11 +497,9 @@ with tab1:
                     "- Log incident in statutory register.\n"
                     "- Stop conveyor if defect is severe."
                 )
-
             else:
                 st.success("✅ NORMAL / HEALTHY LOAD")
-                st.success("AI detected zero anomalies above the threshold.")
-
+                st.success("AI detected zero accepted anomalies above the threshold.")
                 st.info(
                     "📋 Routine Recommendation:\n"
                     "- Continue monitoring.\n"
@@ -413,19 +507,16 @@ with tab1:
                     "- Follow DGMS Circular No. 3 of 2020."
                 )
 
+
 # =========================================================================
 # --- TAB 2: MANUAL OVERRIDE ---
 # =========================================================================
 
 with tab2:
     st.markdown("### 🎙️ Emergency Manual Reporting")
-    st.write("Use your device's microphone/dictation. English, Hindi, and Hinglish are supported.")
+    st.write("Use your device microphone/dictation. English, Hindi, and Hinglish are supported.")
 
-    lang = st.radio(
-        "Response Language / उत्तर की भाषा:",
-        ["English", "हिंदी"],
-        horizontal=True
-    )
+    lang = st.radio("Response Language / उत्तर की भाषा:", ["English", "हिंदी"], horizontal=True)
 
     if "saved_report" not in st.session_state:
         st.session_state["saved_report"] = ""
@@ -454,7 +545,6 @@ with tab2:
                 if lang == "English"
                 else "🚨 गंभीर चेतावनी: बेल्ट फटने की सूचना मिली है।"
             )
-
             if st.button("📱 Dispatch SMS Alert - Belt Tear"):
                 send_emergency_sms("Critical Belt Rupture", active_report)
 
@@ -464,7 +554,6 @@ with tab2:
                 if lang == "English"
                 else "🔥 आग आपातकाल: आग या धुएं की सूचना मिली है।"
             )
-
             if st.button("📱 Dispatch SMS Alert - Fire"):
                 send_emergency_sms("Underground Fire Detected", active_report)
 
@@ -474,7 +563,6 @@ with tab2:
                 if lang == "English"
                 else "🌊 बाढ़ का खतरा: खदान में पानी भरने की सूचना है।"
             )
-
             if st.button("📱 Dispatch SMS Alert - Water"):
                 send_emergency_sms("Critical Inundation Risk", active_report)
 
@@ -494,11 +582,7 @@ with tab2:
 
         st.markdown("---")
 
-        if st.button(
-            "📥 Generate Statutory PDF"
-            if lang == "English"
-            else "📥 वैधानिक PDF जनरेट करें"
-        ):
+        if st.button("📥 Generate Statutory PDF" if lang == "English" else "📥 वैधानिक PDF जनरेट करें"):
             current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
             pdf = FPDF()
@@ -519,7 +603,7 @@ with tab2:
                 data=pdf_bytes,
                 file_name=f"DGMS_Report_{current_time[:10]}.pdf",
                 mime="application/pdf",
-                type="primary"
+                type="primary",
             )
 
 
@@ -536,25 +620,22 @@ with tab3:
         label="Next Statutory Walkthrough",
         value="2 Days",
         delta="-1 day (Urgent)",
-        delta_color="inverse"
+        delta_color="inverse",
     )
-
     col2.metric(
         label="Idler Greasing Status",
         value="Overdue",
         delta="Action Req",
-        delta_color="inverse"
+        delta_color="inverse",
     )
-
     col3.metric(
         label="Belt Tension & Alignment",
         value="Normal",
         delta="14 Days left",
-        delta_color="normal"
+        delta_color="normal",
     )
 
     st.markdown("---")
-
     st.markdown("#### 📋 DGMS Compliance Tracker")
     st.checkbox("Weekly Belt Inspection", value=True, disabled=True)
     st.checkbox("Emergency Pull Cord Test", value=True, disabled=True)
