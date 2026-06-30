@@ -1,19 +1,4 @@
 import os
-import subprocess
-import sys
-
-# =========================================================================
-# 🚨 THE ULTIMATE CLOUD FIX
-# Ultralytics forces standard OpenCV, which crashes on Streamlit Cloud.
-# This silently removes it and forces the headless version before the app loads.
-# =========================================================================
-lockfile_path = "/tmp/fixed_cv2.lock"
-if not os.path.exists(lockfile_path):
-    subprocess.run([sys.executable, "-m", "pip", "uninstall", "-y", "opencv-python"], check=False)
-    subprocess.run([sys.executable, "-m", "pip", "uninstall", "-y", "opencv-python-headless"], check=False)
-    subprocess.run([sys.executable, "-m", "pip", "install", "opencv-python-headless==4.10.0.84"], check=False)
-    open(lockfile_path, "w").close()
-
 import streamlit as st
 
 # FORCE OPENCV HEADLESS MODE VIA ENVIRONMENT VARIABLE
@@ -99,7 +84,6 @@ def load_ai_agents():
     
     return c_agent, s_agent, i_agent
 
-# SAFE INITIALIZATION TO PREVENT NAME ERROR
 conveyor_agent = None
 spillage_agent = None
 idler_agent = None
@@ -179,7 +163,6 @@ with tab1:
     uploaded_file = st.file_uploader("Drag and drop or click to upload", type=["jpg", "png", "jpeg"])
 
     if uploaded_file is not None:
-        # THE TRAP: If models failed, STOP immediately and show the real error.
         if not models_loaded or conveyor_agent is None:
             st.error("🚨 The AI models failed to load in the background. We cannot process the image. Here is the exact reason why:")
             st.code(model_error_message)
@@ -235,60 +218,4 @@ with tab2:
     st.markdown("### 🎙️ Emergency Manual Reporting")
     st.write("Use your device's **Microphone (Dictation)**. Regional languages are supported.")
     
-    lang = st.radio("Response Language / उत्तर की भाषा:", ["English", "हिंदी"], horizontal=True)
-    
-    # ==========================================
-    # THE FIX: We are putting the storage box back!
-    # ==========================================
-    if 'saved_report' not in st.session_state:
-        st.session_state['saved_report'] = ""
-
-    prompt_text = "Describe the incident in detail:" if lang == "English" else "घटना का विस्तार से वर्णन करें:"
-    incident_report = st.text_area(prompt_text, key="incident_input").upper()
-    
-    submit_text = "🚨 Submit Emergency Report" if lang == "English" else "🚨 आपातकालीन रिपोर्ट दर्ज करें"
-    
-    if st.button(submit_text, type="primary"):
-        if incident_report:
-            st.session_state['saved_report'] = incident_report
-        else:
-            st.warning("Please enter a description before submitting." if lang == "English" else "कृपया सबमिट करने से पहले विवरण दर्ज करें।")
-
-    if st.session_state['saved_report']:
-        active_report = st.session_state['saved_report']
-        
-        if any(word in active_report for word in ["TEAR", "CUT", "BROKEN", "FATA", "TUTA"]):
-            st.error("🚨 CRITICAL ALERT LOGGED: Belt Tear/Rupture detected." if lang == "English" else "🚨 गंभीर चेतावनी: बेल्ट फटने की सूचना मिली है।")
-        elif any(word in active_report for word in ["FIRE", "SMOKE", "AAG", "DHUAN"]):
-            st.error("🔥 FIRE EMERGENCY LOGGED: Combustion indicators detected." if lang == "English" else "🔥 आग आपातकाल: आग या धुएं की सूचना मिली है।")
-        elif any(word in active_report for word in ["WATER", "FLOOD", "PAANI", "BAARISH"]):
-            st.error("🌊 INUNDATION RISK LOGGED: Water flooding reported." if lang == "English" else "🌊 बाढ़ का खतरा: खदान में पानी भरने की सूचना है।")
-        else:
-            st.info("📝 General log received. Control room notified." if lang == "English" else "📝 रिपोर्ट दर्ज कर ली गई है।")
-        
-        st.markdown("---")
-        if st.button("📥 Generate Statutory PDF" if lang == "English" else "📥 वैधानिक PDF जनरेट करें"):
-            current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            pdf = FPDF()
-            pdf.add_page()
-            pdf.set_font("Arial", "B", 16)
-            pdf.cell(200, 10, "CONVEYORGUARD - DGMS STATUTORY LOG", ln=True, align='C')
-            pdf.set_font("Arial", "", 12)
-            clean_report = active_report.replace('\n', ' ').encode('latin-1', 'replace').decode('latin-1')
-            pdf.multi_cell(0, 10, clean_report)
-            pdf_bytes = pdf.output(dest="S").encode("latin-1")
-            
-            st.download_button(
-                label="📄 Download Official DGMS Report (PDF)" if lang == "English" else "📄 आधिकारिक DGMS रिपोर्ट डाउनलोड करें (PDF)",
-                data=pdf_bytes,
-                file_name=f"DGMS_Report_{current_time[:10]}.pdf",
-                mime="application/pdf",
-                type="primary"
-            )
-# --- TAB 3: MAINTENANCE SCHEDULER ---
-with tab3:
-    st.markdown("### 🛠️ Predictive Maintenance & Statutory Compliance")
-    col1, col2, col3 = st.columns(3)
-    col1.metric(label="Next Statutory Walkthrough", value="2 Days", delta="-1 day (Urgent)", delta_color="inverse")
-    col2.metric(label="Idler Greasing Status", value="Overdue", delta="Action Req", delta_color="inverse")
-    col3.metric(label="Belt Tension & Alignment", value="Normal", delta="14 Days left", delta_color="normal")
+    lang = st.radio("Response
