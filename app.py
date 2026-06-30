@@ -616,8 +616,8 @@ with tab1:
                 st.write("Confidence threshold:", confidence_threshold)
 
                 if res_conveyor is not None:
-                    st.write("Conveyor model classes:", res_conveyor.names)
-                    st.write("Accepted conveyor detections:", conveyor_dets)
+                   st.write("Raw conveyor detections before filtering:", get_raw_detections(res_conveyor))
+                    st.write("Accepted conveyor detections after filtering:", conveyor_dets)
 
                 if res_spillage is not None:
                     st.write("Spillage model classes:", res_spillage.names)
