@@ -1,5 +1,20 @@
-import streamlit as st
 import os
+import subprocess
+import sys
+
+# =========================================================================
+# 🚨 THE ULTIMATE CLOUD FIX
+# Ultralytics forces standard OpenCV, which crashes on Streamlit Cloud.
+# This silently removes it and forces the headless version before the app loads.
+# =========================================================================
+lockfile_path = "/tmp/fixed_cv2.lock"
+if not os.path.exists(lockfile_path):
+    subprocess.run([sys.executable, "-m", "pip", "uninstall", "-y", "opencv-python"], check=False)
+    subprocess.run([sys.executable, "-m", "pip", "uninstall", "-y", "opencv-python-headless"], check=False)
+    subprocess.run([sys.executable, "-m", "pip", "install", "opencv-python-headless==4.10.0.84"], check=False)
+    open(lockfile_path, "w").close()
+
+import streamlit as st
 
 # FORCE OPENCV HEADLESS MODE VIA ENVIRONMENT VARIABLE
 os.environ["OPENCV_VIDEOIO_PRIORITY_MSMF"] = "0"
