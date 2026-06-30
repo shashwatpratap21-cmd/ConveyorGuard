@@ -243,12 +243,12 @@ with tab1:
             "Detection Confidence Threshold",
             0.10,
             0.99,
-            0.50,
+            0.25,
             0.01
         )
     else:
-        st.info("🔒 System running at statutory default threshold (0.50).")
-        confidence_threshold = 0.50
+        st.info("🔒 System running at statutory default threshold (0.25).")
+        confidence_threshold = 0.25
 
     st.markdown("### 🧠 Select Inspection View")
 
