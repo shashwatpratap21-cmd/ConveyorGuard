@@ -85,28 +85,34 @@ st.subheader("Tata Steel Unified Multi-Agent Vision System")
 # =========================================================================
 
 @st.cache_resource
-def load_ai_agents():
+def load_all_ai_agents():
     base_dir = os.path.dirname(os.path.abspath(__file__))
 
-    conveyor_path = os.path.join(base_dir, "conveyor_model.pt")
+    conveyor_current_path = os.path.join(base_dir, "conveyor_model.pt")
+    conveyor_old_path = os.path.join(base_dir, "conveyor_model_old.pt")
+    conveyor_seg_path = os.path.join(base_dir, "conveyor_model_seg_clean.pt")
     spillage_path = os.path.join(base_dir, "spillage_model.pt")
     idler_path = os.path.join(base_dir, "idler_model.pt")
 
-    missing = []
+    paths = [
+        conveyor_current_path,
+        conveyor_old_path,
+        conveyor_seg_path,
+        spillage_path,
+        idler_path,
+    ]
 
-    for path in [conveyor_path, spillage_path, idler_path]:
-        if not os.path.exists(path):
-            missing.append(path)
-
+    missing = [p for p in paths if not os.path.exists(p)]
     if missing:
         raise FileNotFoundError("Missing model files: " + ", ".join(missing))
 
-    conveyor_agent = YOLO(conveyor_path)
+    conveyor_current = YOLO(conveyor_current_path)
+    conveyor_old = YOLO(conveyor_old_path)
+    conveyor_seg = YOLO(conveyor_seg_path)
     spillage_agent = YOLO(spillage_path)
     idler_agent = YOLO(idler_path)
 
-    return conveyor_agent, spillage_agent, idler_agent
-
+    return conveyor_current, conveyor_old, conveyor_seg, spillage_agent, idler_agent
 conveyor_agent = None
 spillage_agent = None
 idler_agent = None
