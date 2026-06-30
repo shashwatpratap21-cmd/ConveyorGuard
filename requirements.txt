@@ -5,3 +5,4 @@ pillow
 streamlit
 twilio
 fpdf
+libgthread-2.0-0
