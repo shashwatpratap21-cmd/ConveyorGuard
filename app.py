@@ -647,9 +647,9 @@ with tab1:
 
                 for det in all_dets:
                     if det["model"] == "Belt Surface Damage":
-                    st.warning(
-                        f"Belt Surface Damage detected with {det['confidence'] * 100:.1f}% confidence."
-                    )
+                        st.warning(
+                            f"Belt Surface Damage detected with {det['confidence'] * 100:.1f}% confidence."
+                        )
                     else:
                         st.warning(
                             f"{det['model']}: {det['class']} detected with {det['confidence'] * 100:.1f}% confidence."
