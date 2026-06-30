@@ -341,40 +341,41 @@ with tab1:
 
         with col_results:
             st.markdown("### Inspection Verdict:")
-with st.expander("🔍 Debug: Model Raw Output"):
 
-    if res_conveyor is not None:
-        st.write("Conveyor model classes:", res_conveyor[0].names)
-        st.write(
-            "Conveyor boxes:",
-            len(res_conveyor[0].boxes) if res_conveyor[0].boxes is not None else 0
-        )
-        st.write(
-            "Conveyor masks:",
-            len(res_conveyor[0].masks) if res_conveyor[0].masks is not None else 0
-        )
+            with st.expander("🔍 Debug: Model Raw Output"):
+                if res_conveyor is not None:
+                    st.write("Conveyor model classes:", res_conveyor[0].names)
+                    st.write(
+                        "Conveyor boxes:",
+                        len(res_conveyor[0].boxes) if res_conveyor[0].boxes is not None else 0
+                    )
+                    st.write(
+                        "Conveyor masks:",
+                        len(res_conveyor[0].masks) if res_conveyor[0].masks is not None else 0
+                    )
 
-    if res_spillage is not None:
-        st.write("Spillage model classes:", res_spillage[0].names)
-        st.write(
-            "Spillage boxes:",
-            len(res_spillage[0].boxes) if res_spillage[0].boxes is not None else 0
-        )
-        st.write(
-            "Spillage masks:",
-            len(res_spillage[0].masks) if res_spillage[0].masks is not None else 0
-        )
+                if res_spillage is not None:
+                    st.write("Spillage model classes:", res_spillage[0].names)
+                    st.write(
+                        "Spillage boxes:",
+                        len(res_spillage[0].boxes) if res_spillage[0].boxes is not None else 0
+                    )
+                    st.write(
+                        "Spillage masks:",
+                        len(res_spillage[0].masks) if res_spillage[0].masks is not None else 0
+                    )
 
-    if res_idler is not None:
-        st.write("Idler model classes:", res_idler[0].names)
-        st.write(
-            "Idler boxes:",
-            len(res_idler[0].boxes) if res_idler[0].boxes is not None else 0
-        )
-        st.write(
-            "Idler masks:",
-            len(res_idler[0].masks) if res_idler[0].masks is not None else 0
-        )
+                if res_idler is not None:
+                    st.write("Idler model classes:", res_idler[0].names)
+                    st.write(
+                        "Idler boxes:",
+                        len(res_idler[0].boxes) if res_idler[0].boxes is not None else 0
+                    )
+                    st.write(
+                        "Idler masks:",
+                        len(res_idler[0].masks) if res_idler[0].masks is not None else 0
+                    )
+
             conveyor_count = count_detections(res_conveyor)
             spillage_count = count_detections(res_spillage)
             idler_count = count_detections(res_idler)
@@ -404,13 +405,13 @@ with st.expander("🔍 Debug: Model Raw Output"):
             else:
                 st.success("✅ NORMAL / HEALTHY LOAD")
                 st.success("AI detected zero anomalies above the threshold.")
+
                 st.info(
                     "📋 Routine Recommendation:\n"
                     "- Continue monitoring.\n"
                     "- Next scheduled inspection: 7 days.\n"
                     "- Follow DGMS Circular No. 3 of 2020."
                 )
-
 
 # =========================================================================
 # --- TAB 2: MANUAL OVERRIDE ---
