@@ -654,16 +654,14 @@ with tab1:
                 )
 
             else:
-                st.success("✅ NORMAL / HEALTHY LOAD")
-                st.success("AI detected zero accepted anomalies above the threshold.")
-
+                st.success("✅ NO AI-CONFIRMED ANOMALY")
+                st.info("If visible damage is present, mark this image for retraining/manual inspection.")
                 st.info(
                     "📋 Routine Recommendation:\n"
                     "- Continue monitoring.\n"
                     "- Next scheduled inspection: 7 days.\n"
                     "- Follow DGMS Circular No. 3 of 2020."
-                )
-
+               )
 
 # =========================================================================
 # --- TAB 2: MANUAL OVERRIDE ---
