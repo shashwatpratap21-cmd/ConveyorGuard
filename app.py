@@ -295,7 +295,7 @@ with tab1:
                     res_conveyor, annotated_img = run_single_model(
                         conveyor_agent,
                         img_array,
-                        max(confidence_threshold, 0.50)
+                        confidence_threshold
                     )
 
                 elif inspection_mode == "Spillage / Foreign Object":
@@ -315,7 +315,7 @@ with tab1:
                 else:
                     res_conveyor = conveyor_agent(
                         img_array,
-                        conf=max(confidence_threshold, 0.50),
+                        conf=confidence_threshold,
                         verbose=False
                     )
 
