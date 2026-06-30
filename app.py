@@ -605,7 +605,7 @@ with tab1:
 
             st.image(annotated_img, use_container_width=True)
 
-                with col_results:
+        with col_results:
             st.markdown("### Inspection Verdict:")
 
             all_dets = conveyor_dets + spillage_dets + idler_dets
