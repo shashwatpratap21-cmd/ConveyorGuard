@@ -243,7 +243,7 @@ def combine_images(base_img, overlay_img):
 
 def recommended_confidence(mode):
     if mode == "Belt Surface Damage":
-        return 0.20
+        return 0.15
     if mode == "Spillage / Foreign Object":
         return 0.55
     if mode == "Idler / Roller Mechanical Health":
