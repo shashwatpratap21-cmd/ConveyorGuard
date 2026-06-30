@@ -646,9 +646,14 @@ with tab1:
                 st.error("Action: Dispatch maintenance team to verify zones.")
 
                 for det in all_dets:
+                    if det["model"] == "Belt Surface Damage":
                     st.warning(
-                        f"{det['model']}: {det['class']} detected with {det['confidence'] * 100:.1f}% confidence."
+                        f"Belt Surface Damage detected with {det['confidence'] * 100:.1f}% confidence."
                     )
+                    else:
+                        st.warning(
+                            f"{det['model']}: {det['class']} detected with {det['confidence'] * 100:.1f}% confidence."
+                        )
 
                 st.info(
                     "📋 DGMS Recommendation:\n"
