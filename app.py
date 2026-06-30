@@ -1,26 +1,16 @@
 import streamlit as st
 import os
 
-# ==========================================
-# 🚨 ERROR UNMASKING TRAP
-# Streamlit hides cv2 errors. This forces it to print to the screen.
-# ==========================================
-try:
-    import cv2
-    from ultralytics import YOLO
-except Exception as e:
-    st.error("🚨 REAL SERVER ERROR REVEALED:")
-    st.code(str(e))
-    st.stop()
+# FORCE OPENCV HEADLESS MODE VIA ENVIRONMENT VARIABLE
+os.environ["OPENCV_VIDEOIO_PRIORITY_MSMF"] = "0"
 
+from ultralytics import YOLO
 import numpy as np
 from PIL import Image
+import cv2
 from twilio.rest import Client
 import datetime
 from fpdf import FPDF
-
-# FORCE OPENCV HEADLESS MODE VIA ENVIRONMENT VARIABLE
-os.environ["OPENCV_VIDEOIO_PRIORITY_MSMF"] = "0"
 
 # =========================================================================
 # --- TWILIO SMS CONFIGURATION ---
