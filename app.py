@@ -607,6 +607,7 @@ with tab1:
                         BELT_BLOCKED,
                         "Belt Surface Damage",
                         color=(255, 70, 70),
+                        roi=BELT_ROI,
                     )
 
                     res_spillage, annotated_img, spillage_dets = run_filtered_model(
