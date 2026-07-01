@@ -199,6 +199,12 @@ IDLER_BLOCKED = [
     "person",
     "human",
 ]
+BELT_ROI = {
+    "x_min": 0.08,
+    "x_max": 0.88,
+    "y_min": 0.18,
+    "y_max": 0.95,
+}
 
 
 def model_names(model):
