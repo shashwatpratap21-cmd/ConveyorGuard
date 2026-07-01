@@ -280,6 +280,7 @@ def run_filtered_model(
     blocked_keywords,
     model_label,
     color=(255, 0, 0),
+    roi=None,
 ):
     result = model(image_array, conf=confidence, verbose=False)[0]
 
