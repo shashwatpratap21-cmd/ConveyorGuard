@@ -605,89 +605,155 @@ with tab1:
             st.image(annotated_img, use_container_width=True)
 
         with col_results:
-            st.markdown("### Inspection Verdict:")
+           st.markdown("### Inspection Verdict:")
 
-            all_dets = conveyor_dets + spillage_dets + idler_dets
-            total_anomalies = len(all_dets)
+all_dets = conveyor_dets + spillage_dets + idler_dets
+total_anomalies = len(all_dets)
 
-            with st.expander("🔍 Debug: Model Raw Output"):
-                st.write("Inspection mode:", inspection_mode)
-                st.write("Confidence threshold:", confidence_threshold)
+with st.expander("🔍 Debug: Model Raw Output", expanded=False):
+    st.write("Inspection mode:", inspection_mode)
+    st.write("Confidence threshold:", confidence_threshold)
 
-                if res_conveyor_current is not None:
-                    st.write("Current Active Model classes:", res_conveyor_current.names)
-                    st.write("Current Active raw detections:", get_raw_detections(res_conveyor_current))
-                    st.write("Current Active accepted detections:", conveyor_current_dets)
+    if res_conveyor_current is not None:
+        st.write("Current Active Model classes:", res_conveyor_current.names)
+        st.write("Current Active raw detections:", get_raw_detections(res_conveyor_current))
+        st.write("Current Active accepted detections:", conveyor_current_dets)
 
-                if res_conveyor_old is not None:
-                    st.write("Old Backup Model classes:", res_conveyor_old.names)
-                    st.write("Old Backup raw detections:", get_raw_detections(res_conveyor_old))
-                    st.write("Old Backup accepted detections:", conveyor_old_dets)
+    if res_conveyor_old is not None:
+        st.write("Old Backup Model classes:", res_conveyor_old.names)
+        st.write("Old Backup raw detections:", get_raw_detections(res_conveyor_old))
+        st.write("Old Backup accepted detections:", conveyor_old_dets)
 
-                if res_conveyor_seg is not None:
-                    st.write("Segmentation Clean Model classes:", res_conveyor_seg.names)
-                    st.write("Segmentation Clean raw detections:", get_raw_detections(res_conveyor_seg))
-                    st.write("Segmentation Clean accepted detections:", conveyor_seg_dets)
+    if res_conveyor_seg is not None:
+        st.write("Segmentation Clean Model classes:", res_conveyor_seg.names)
+        st.write("Segmentation Clean raw detections:", get_raw_detections(res_conveyor_seg))
+        st.write("Segmentation Clean accepted detections:", conveyor_seg_dets)
 
-                if res_spillage is not None:
-                    st.write("Spillage model classes:", res_spillage.names)
-                    st.write("Raw spillage detections before filtering:", get_raw_detections(res_spillage))
-                    st.write("Accepted spillage detections after filtering:", spillage_dets)
+    if res_spillage is not None:
+        st.write("Spillage model classes:", res_spillage.names)
+        st.write("Raw spillage detections before filtering:", get_raw_detections(res_spillage))
+        st.write("Accepted spillage detections after filtering:", spillage_dets)
 
-                if res_idler is not None:
-                    st.write("Idler model classes:", res_idler.names)
-                    st.write("Raw idler detections before filtering:", get_raw_detections(res_idler))
-                    st.write("Accepted idler detections after filtering:", idler_dets)
+    if res_idler is not None:
+        st.write("Idler model classes:", res_idler.names)
+        st.write("Raw idler detections before filtering:", get_raw_detections(res_idler))
+        st.write("Accepted idler detections after filtering:", idler_dets)
 
-            if total_anomalies > 0:
-                st.error(f"🚨 {total_anomalies} ANOMALIES DETECTED")
-                st.error("Action: Dispatch maintenance team to verify zones.")
 
-                if inspection_mode == "Belt Surface Damage":
-                    triggered_models = 0
-                    if len(conveyor_current_dets) > 0:
-                        triggered_models += 1
-                    if len(conveyor_old_dets) > 0:
-                        triggered_models += 1
-                    if len(conveyor_seg_dets) > 0:
-                        triggered_models += 1
+if inspection_mode == "Belt Surface Damage":
+    current_count = len(conveyor_current_dets)
+    old_count = len(conveyor_old_dets)
+    seg_count = len(conveyor_seg_dets)
 
-                    st.warning(f"Current Active Model detections: {len(conveyor_current_dets)}")
-                    st.warning(f"Old Backup Model detections: {len(conveyor_old_dets)}")
-                    st.warning(f"Segmentation Clean Model detections: {len(conveyor_seg_dets)}")
+    models_triggered = sum([1 for c in [current_count, old_count, seg_count] if c > 0])
 
-                    if triggered_models >= 2:
-                        st.error("🚨 Cross-model agreement detected. High-confidence belt damage alert.")
-                    else:
-                        st.info("⚠️ Only one conveyor model triggered. Review image manually.")
+    st.markdown("## 📊 Multi-Agent AI Inspection Verdict")
 
-                    for det in all_dets:
-                        st.warning(
-                            f"{det['model']}: {det['class']} detected with {det['confidence'] * 100:.1f}% confidence."
-                        )
-                else:
-                    for det in all_dets:
-                        st.warning(
-                            f"{det['model']}: {det['class']} detected with {det['confidence'] * 100:.1f}% confidence."
-                        )
+    # ZONE 1: CONSENSUS THREAT BANNER
+    if models_triggered >= 2:
+        st.error(
+            f"🚨 CRITICAL ALARM: HIGH-CONFIDENCE BELT DAMAGE DETECTED\n\n"
+            f"Cross-model verification confirmed anomaly presence. "
+            f"Ensemble consensus level: {models_triggered}/3 conveyor models triggered."
+        )
+    elif models_triggered == 1:
+        st.warning(
+            "⚠️ ATTENTION: TENTATIVE BELT ANOMALY DETECTED\n\n"
+            "Only one conveyor model triggered. Manual verification is recommended."
+        )
+    else:
+        st.success(
+            "✅ SYSTEM STATUS: NO AI-CONFIRMED BELT ANOMALY\n\n"
+            "All three conveyor models report no accepted belt-surface anomaly above threshold."
+        )
 
-                st.info(
-                    "📋 DGMS Recommendation:\n"
-                    "- Immediate physical inspection required.\n"
-                    "- Log incident in statutory register.\n"
-                    "- Stop conveyor if defect is severe."
+    # ZONE 2: MODEL METRIC GRID
+    st.markdown("### 🖥️ Conveyor Model Consensus Breakdown")
+    col_m1, col_m2, col_m3 = st.columns(3)
+
+    with col_m1:
+        st.metric(
+            label="Current Active Model",
+            value=f"{current_count} detections",
+            delta="Primary Agent" if current_count == 0 else "Triggered",
+            delta_color="inverse",
+        )
+
+    with col_m2:
+        st.metric(
+            label="Old Backup Model",
+            value=f"{old_count} detections",
+            delta="Validation Agent" if old_count == 0 else "Triggered",
+            delta_color="inverse",
+        )
+
+    with col_m3:
+        st.metric(
+            label="Segmentation Clean Model",
+            value=f"{seg_count} detections",
+            delta="Experimental Agent" if seg_count == 0 else "Triggered",
+            delta_color="inverse",
+        )
+
+    # ZONE 3: DETAILED DETECTION LOG
+    with st.expander("🧾 Detailed Conveyor Detection Log", expanded=False):
+        if total_anomalies > 0:
+            for det in all_dets:
+                st.warning(
+                    f"{det['model']}: {det['class']} detected with {det['confidence'] * 100:.1f}% confidence."
                 )
+        else:
+            st.write("No accepted belt detections logged.")
 
-            else:
-                st.success("✅ NO AI-CONFIRMED ANOMALY")
-                st.info("If visible damage is present, mark this image for retraining/manual inspection.")
-                st.info(
-                    "📋 Routine Recommendation:\n"
-                    "- Continue monitoring.\n"
-                    "- Next scheduled inspection: 7 days.\n"
-                    "- Follow DGMS Circular No. 3 of 2020."
-                )
+    # ZONE 4: DGMS ACTION ITEMS
+    st.markdown("---")
+    with st.expander("📋 DGMS Statutory Action Items & Recommendations", expanded=True):
+        if models_triggered >= 2:
+            st.markdown(
+                "1. **Immediate Physical Inspection:** Dispatch maintenance team to verify defect location.\n"
+                "2. **Statutory Logging:** Record this anomaly in the plant maintenance / statutory inspection register.\n"
+                "3. **Operational Decision:** Stop conveyor if defect severity is confirmed as critical.\n"
+                "4. **Escalation:** Use Manual Override tab if additional report tagging is required."
+            )
+        elif models_triggered == 1:
+            st.markdown(
+                "1. **Manual Verification Required:** Cross-check image and inspect physical belt condition.\n"
+                "2. **Camera Check:** Verify dust, glare, angle, or low-visibility conditions.\n"
+                "3. **Retraining Candidate:** If visible damage exists, mark this frame for retraining."
+            )
+        else:
+            st.markdown(
+                "1. **Routine Monitoring:** Continue standard belt surveillance.\n"
+                "2. **Operator Review:** If visible damage appears missed, log image via Manual Override.\n"
+                "3. **Next Inspection:** Follow DGMS routine inspection schedule."
+            )
 
+else:
+    # Non-belt modes keep simpler verdict
+    if total_anomalies > 0:
+        st.error(f"🚨 {total_anomalies} ANOMALIES DETECTED")
+        st.error("Action: Dispatch maintenance team to verify zones.")
+
+        for det in all_dets:
+            st.warning(
+                f"{det['model']}: {det['class']} detected with {det['confidence'] * 100:.1f}% confidence."
+            )
+
+        st.info(
+            "📋 DGMS Recommendation:\n"
+            "- Immediate physical inspection required.\n"
+            "- Log incident in statutory register.\n"
+            "- Stop conveyor if defect is severe."
+        )
+    else:
+        st.success("✅ NO AI-CONFIRMED ANOMALY")
+        st.info("If visible damage is present, mark this image for retraining/manual inspection.")
+        st.info(
+            "📋 Routine Recommendation:\n"
+            "- Continue monitoring.\n"
+            "- Next scheduled inspection: 7 days.\n"
+            "- Follow DGMS Circular No. 3 of 2020."
+        )
 
 # =========================================================================
 # --- TAB 2: MANUAL OVERRIDE ---
