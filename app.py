@@ -556,6 +556,7 @@ with tab1:
                         BELT_BLOCKED,
                         "Old Backup Model",
                         color=(255, 165, 0),
+                        roi=BELT_ROI,
                     )
 
                     res_conveyor_seg, annotated_seg, conveyor_seg_dets = run_filtered_model(
@@ -566,6 +567,7 @@ with tab1:
                         BELT_BLOCKED,
                         "Segmentation Clean Model",
                         color=(80, 180, 255),
+                        roi=BELT_ROI,
                     )
 
                     annotated_img = annotated_current.copy()
