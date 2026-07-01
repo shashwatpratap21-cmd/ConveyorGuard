@@ -545,7 +545,8 @@ with tab1:
                         BELT_BLOCKED,
                         "Current Active Model",
                         color=(255, 70, 70),
-                    )
+                        roi=BELT_ROI,
+                     )
 
                     res_conveyor_old, annotated_old, conveyor_old_dets = run_filtered_model(
                         conveyor_old,
