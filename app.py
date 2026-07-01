@@ -479,6 +479,19 @@ with tab1:
     uploaded_file = st.file_uploader(
         "Drag and drop or click to upload", type=["jpg", "png", "jpeg"]
     )
+    conveyor_dets = []
+conveyor_current_dets = []
+conveyor_old_dets = []
+conveyor_seg_dets = []
+spillage_dets = []
+idler_dets = []
+
+res_conveyor = None
+res_conveyor_current = None
+res_conveyor_old = None
+res_conveyor_seg = None
+res_spillage = None
+res_idler = None
 
     if uploaded_file is not None:
         if not models_loaded:
