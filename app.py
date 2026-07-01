@@ -1,6 +1,5 @@
 import os
 import datetime
-
 import streamlit as st
 
 # OpenCV cloud setting for Streamlit Cloud
@@ -13,11 +12,9 @@ from fpdf import FPDF
 from twilio.rest import Client
 from ultralytics import YOLO
 
-
 # =========================================================================
 # --- TWILIO SMS CONFIGURATION ---
 # =========================================================================
-
 def send_emergency_sms(alert_type, details):
     TWILIO_SID = st.secrets.get("TWILIO_SID", "Dummy_SID")
     TWILIO_TOKEN = st.secrets.get("TWILIO_TOKEN", "Dummy_Token")
@@ -45,7 +42,6 @@ def send_emergency_sms(alert_type, details):
 # =========================================================================
 # --- APP CONFIGURATION ---
 # =========================================================================
-
 st.set_page_config(
     page_title="ConveyorGuard Vision",
     page_icon="⛏️",
@@ -83,7 +79,6 @@ st.subheader("Tata Steel Unified Multi-Agent Vision System")
 # =========================================================================
 # --- LOAD YOLOv8 AI AGENTS ---
 # =========================================================================
-
 @st.cache_resource
 def load_all_ai_agents():
     base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -113,6 +108,8 @@ def load_all_ai_agents():
     idler_agent = YOLO(idler_path)
 
     return conveyor_current, conveyor_old, conveyor_seg, spillage_agent, idler_agent
+
+
 conveyor_current = None
 conveyor_old = None
 conveyor_seg = None
@@ -128,20 +125,10 @@ except Exception as e:
     model_error_message = str(e)
     st.error(f"⚠️ REAL MODEL LOADING ERROR: {model_error_message}")
 
+
 # =========================================================================
 # --- FILTERING AND DRAWING HELPERS ---
 # =========================================================================
-
-# Belt surface model classes from your debug:
-# 0: Hole
-# 1: Human
-# 2: Other Objects
-# 3: Puncture
-# 4: Roller
-# 5: Tear
-# 6: impact damage
-# 7: patch work
-
 BELT_ALLOWED = [
     "hole",
     "puncture",
@@ -160,7 +147,7 @@ BELT_ALLOWED = [
     "burn",
     "brulure",
     "wear",
-    "abrasion"
+    "abrasion",
 ]
 
 BELT_BLOCKED = [
@@ -173,7 +160,7 @@ BELT_BLOCKED = [
     "other object",
     "coal",
     "rock",
-    "load"
+    "load",
 ]
 
 SPILLAGE_ALLOWED = [
@@ -184,7 +171,7 @@ SPILLAGE_ALLOWED = [
     "foreign",
     "foreign object",
     "spillage",
-    "debris"
+    "debris",
 ]
 
 SPILLAGE_BLOCKED = [
@@ -194,7 +181,7 @@ SPILLAGE_BLOCKED = [
     "idler",
     "pole",
     "other objects",
-    "other object"
+    "other object",
 ]
 
 IDLER_ALLOWED = [
@@ -205,24 +192,21 @@ IDLER_ALLOWED = [
     "damaged",
     "damage",
     "misalignment",
-    "desalineamiento"
+    "desalineamiento",
 ]
 
 IDLER_BLOCKED = [
     "person",
-    "human"
+    "human",
 ]
 
 
 def model_names(model):
     try:
         names = model.names
-
         if isinstance(names, dict):
             return names
-
         return {i: name for i, name in enumerate(names)}
-
     except Exception:
         return {}
 
@@ -245,7 +229,6 @@ def draw_label(img, text, x1, y1, color):
     font_scale = 0.6
     thickness = 2
 
-    # Correct OpenCV text size syntax
     (tw, th), baseline = cv2.getTextSize(text, font, font_scale, thickness)
 
     y1 = max(y1, th + 10)
@@ -278,13 +261,6 @@ def run_filtered_model(
     model_label,
     color=(255, 0, 0),
 ):
-    """
-    Runs YOLO, filters unwanted classes, and draws only accepted detections.
-
-    Important:
-    This prevents Belt Surface Damage mode from showing Human / Roller / Other Objects.
-    """
-
     result = model(image_array, conf=confidence, verbose=False)[0]
 
     annotated = image_array.copy()
@@ -307,22 +283,18 @@ def run_filtered_model(
         else:
             class_name = names[cls_id]
 
-        # Filter unwanted classes
         if not class_is_allowed(class_name, allowed_keywords, blocked_keywords):
             continue
 
         x1, y1, x2, y2 = box.xyxy[0].cpu().numpy().astype(int).tolist()
 
-        # Draw segmentation mask if available
         if masks_xy is not None and i < len(masks_xy):
             pts = masks_xy[i].astype(np.int32)
             cv2.fillPoly(overlay, [pts], color)
             cv2.polylines(annotated, [pts], True, color, 2)
 
-        # Draw bounding box
         cv2.rectangle(annotated, (x1, y1), (x2, y2), color, 2)
 
-        # Better label format: Tear 25% instead of Tear 0.25
         label = f"{class_name.title()} {conf * 100:.0f}%"
         draw_label(annotated, label, x1, y1, color)
 
@@ -336,9 +308,7 @@ def run_filtered_model(
             }
         )
 
-    # Transparent mask overlay
     annotated = cv2.addWeighted(overlay, 0.35, annotated, 0.65, 0)
-
     return result, annotated, detections
 
 
@@ -359,57 +329,47 @@ def get_raw_detections(result):
             else:
                 class_name = names[cls_id]
 
-            raw.append({
-                "class": class_name,
-                "confidence": round(conf, 3),
-                "confidence_percent": round(conf * 100, 1)
-            })
+            raw.append(
+                {
+                    "class": class_name,
+                    "confidence": round(conf, 3),
+                    "confidence_percent": round(conf * 100, 1),
+                }
+            )
 
         return raw
 
     except Exception as e:
         return [{"debug_error": str(e)}]
 
-def combine_images(base_img, overlay_img):
-    """
-    Placeholder helper.
-    Currently returns the latest annotated image.
-    """
-    return overlay_img
+
+def combine_conveyor_detections(det_groups):
+    combined = []
+    for group in det_groups:
+        combined.extend(group)
+    return combined
 
 
 def recommended_confidence(mode):
-    """
-    Different models need different thresholds.
-
-    Belt damage is kept sensitive because early tear/burn/patch warnings may appear
-    at lower confidence.
-    """
-
     if mode == "Belt Surface Damage":
         return 0.10
-
     if mode == "Spillage / Foreign Object":
         return 0.55
-
     if mode == "Idler / Roller Mechanical Health":
         return 0.60
-
     return 0.45
+
 
 # =========================================================================
 # --- TABS ---
 # =========================================================================
-
 tab1, tab2, tab3 = st.tabs(
     ["🚨 AI Vision Inspection", "📝 Manual Override (Codes)", "🛠️ Maintenance Scheduler"]
 )
 
-
 # =========================================================================
 # --- TAB 1: AI VISION INSPECTION ---
 # =========================================================================
-
 with tab1:
     st.markdown("### Upload Conveyor Belt Image")
 
@@ -490,14 +450,15 @@ with tab1:
         st.warning(
             "Use Belt Surface Damage only when belt rubber is visible. If coal/rocks cover the belt, use Spillage / Foreign Object mode."
         )
+        st.caption("In Belt Surface Damage mode, all three conveyor models are evaluated together for cross-checking.")
 
     st.caption(
         "False detections are reduced by running only the correct specialist model and filtering unwanted classes."
     )
 
     st.markdown("### 🎛️ AI Calibration")
-    default_conf = recommended_confidence(inspection_mode)
 
+    default_conf = recommended_confidence(inspection_mode)
     admin_password = st.text_input("Enter Admin Password to Unlock Calibration:", type="password")
 
     if admin_password == "dgms2026":
@@ -520,7 +481,7 @@ with tab1:
     )
 
     if uploaded_file is not None:
-        if not models_loaded or conveyor_agent is None:
+        if not models_loaded:
             st.error("🚨 The AI models failed to load. Reason:")
             st.code(model_error_message)
             st.stop()
@@ -533,25 +494,60 @@ with tab1:
         with col_img:
             with st.spinner("AI Agents inspecting conveyor belt..."):
                 res_conveyor = None
+                res_conveyor_current = None
+                res_conveyor_old = None
+                res_conveyor_seg = None
                 res_spillage = None
                 res_idler = None
 
                 conveyor_dets = []
+                conveyor_current_dets = []
+                conveyor_old_dets = []
+                conveyor_seg_dets = []
                 spillage_dets = []
                 idler_dets = []
 
                 annotated_img = img_array.copy()
+                annotated_current = img_array.copy()
+                annotated_old = img_array.copy()
+                annotated_seg = img_array.copy()
 
                 if inspection_mode == "Belt Surface Damage":
-                    res_conveyor, annotated_img, conveyor_dets = run_filtered_model(
-                        conveyor_agent,
+                    res_conveyor_current, annotated_current, conveyor_current_dets = run_filtered_model(
+                        conveyor_current,
                         img_array,
                         confidence_threshold,
                         BELT_ALLOWED,
                         BELT_BLOCKED,
-                        "Belt Surface Damage",
+                        "Current Active Model",
                         color=(255, 70, 70),
                     )
+
+                    res_conveyor_old, annotated_old, conveyor_old_dets = run_filtered_model(
+                        conveyor_old,
+                        img_array,
+                        confidence_threshold,
+                        BELT_ALLOWED,
+                        BELT_BLOCKED,
+                        "Old Backup Model",
+                        color=(255, 165, 0),
+                    )
+
+                    res_conveyor_seg, annotated_seg, conveyor_seg_dets = run_filtered_model(
+                        conveyor_seg,
+                        img_array,
+                        confidence_threshold,
+                        BELT_ALLOWED,
+                        BELT_BLOCKED,
+                        "Segmentation Clean Model",
+                        color=(80, 180, 255),
+                    )
+
+                    annotated_img = annotated_current.copy()
+                    conveyor_dets = combine_conveyor_detections(
+                        [conveyor_current_dets, conveyor_old_dets, conveyor_seg_dets]
+                    )
+                    res_conveyor = res_conveyor_current
 
                 elif inspection_mode == "Spillage / Foreign Object":
                     res_spillage, annotated_img, spillage_dets = run_filtered_model(
@@ -577,7 +573,7 @@ with tab1:
 
                 else:
                     res_conveyor, annotated_img, conveyor_dets = run_filtered_model(
-                        conveyor_agent,
+                        conveyor_current,
                         annotated_img,
                         max(confidence_threshold, 0.20),
                         BELT_ALLOWED,
@@ -585,6 +581,7 @@ with tab1:
                         "Belt Surface Damage",
                         color=(255, 70, 70),
                     )
+
                     res_spillage, annotated_img, spillage_dets = run_filtered_model(
                         spillage_agent,
                         annotated_img,
@@ -594,6 +591,7 @@ with tab1:
                         "Spillage / Foreign Object",
                         color=(255, 165, 0),
                     )
+
                     res_idler, annotated_img, idler_dets = run_filtered_model(
                         idler_agent,
                         annotated_img,
@@ -616,49 +614,59 @@ with tab1:
                 st.write("Inspection mode:", inspection_mode)
                 st.write("Confidence threshold:", confidence_threshold)
 
-                if res_conveyor is not None:
-                    st.write("Conveyor model classes:", res_conveyor.names)
-                    st.write(
-                        "Raw conveyor detections before filtering:",
-                        get_raw_detections(res_conveyor)
-                    )
-                    st.write(
-                        "Accepted conveyor detections after filtering:",
-                        conveyor_dets
-                    )
+                if res_conveyor_current is not None:
+                    st.write("Current Active Model classes:", res_conveyor_current.names)
+                    st.write("Current Active raw detections:", get_raw_detections(res_conveyor_current))
+                    st.write("Current Active accepted detections:", conveyor_current_dets)
+
+                if res_conveyor_old is not None:
+                    st.write("Old Backup Model classes:", res_conveyor_old.names)
+                    st.write("Old Backup raw detections:", get_raw_detections(res_conveyor_old))
+                    st.write("Old Backup accepted detections:", conveyor_old_dets)
+
+                if res_conveyor_seg is not None:
+                    st.write("Segmentation Clean Model classes:", res_conveyor_seg.names)
+                    st.write("Segmentation Clean raw detections:", get_raw_detections(res_conveyor_seg))
+                    st.write("Segmentation Clean accepted detections:", conveyor_seg_dets)
 
                 if res_spillage is not None:
                     st.write("Spillage model classes:", res_spillage.names)
-                    st.write(
-                        "Raw spillage detections before filtering:",
-                        get_raw_detections(res_spillage)
-                    )
-                    st.write(
-                        "Accepted spillage detections after filtering:",
-                        spillage_dets
-                    )
+                    st.write("Raw spillage detections before filtering:", get_raw_detections(res_spillage))
+                    st.write("Accepted spillage detections after filtering:", spillage_dets)
 
                 if res_idler is not None:
                     st.write("Idler model classes:", res_idler.names)
-                    st.write(
-                        "Raw idler detections before filtering:",
-                        get_raw_detections(res_idler)
-                    )
-                    st.write(
-                        "Accepted idler detections after filtering:",
-                        idler_dets
-                    )
+                    st.write("Raw idler detections before filtering:", get_raw_detections(res_idler))
+                    st.write("Accepted idler detections after filtering:", idler_dets)
 
             if total_anomalies > 0:
                 st.error(f"🚨 {total_anomalies} ANOMALIES DETECTED")
                 st.error("Action: Dispatch maintenance team to verify zones.")
 
-                for det in all_dets:
-                    if det["model"] == "Belt Surface Damage":
-                        st.warning(
-                            f"Belt Surface Damage detected with {det['confidence'] * 100:.1f}% confidence."
-                        )
+                if inspection_mode == "Belt Surface Damage":
+                    triggered_models = 0
+                    if len(conveyor_current_dets) > 0:
+                        triggered_models += 1
+                    if len(conveyor_old_dets) > 0:
+                        triggered_models += 1
+                    if len(conveyor_seg_dets) > 0:
+                        triggered_models += 1
+
+                    st.warning(f"Current Active Model detections: {len(conveyor_current_dets)}")
+                    st.warning(f"Old Backup Model detections: {len(conveyor_old_dets)}")
+                    st.warning(f"Segmentation Clean Model detections: {len(conveyor_seg_dets)}")
+
+                    if triggered_models >= 2:
+                        st.error("🚨 Cross-model agreement detected. High-confidence belt damage alert.")
                     else:
+                        st.info("⚠️ Only one conveyor model triggered. Review image manually.")
+
+                    for det in all_dets:
+                        st.warning(
+                            f"{det['model']}: {det['class']} detected with {det['confidence'] * 100:.1f}% confidence."
+                        )
+                else:
+                    for det in all_dets:
                         st.warning(
                             f"{det['model']}: {det['class']} detected with {det['confidence'] * 100:.1f}% confidence."
                         )
@@ -678,12 +686,12 @@ with tab1:
                     "- Continue monitoring.\n"
                     "- Next scheduled inspection: 7 days.\n"
                     "- Follow DGMS Circular No. 3 of 2020."
-               )
+                )
+
 
 # =========================================================================
 # --- TAB 2: MANUAL OVERRIDE ---
 # =========================================================================
-
 with tab2:
     st.markdown("### 🎙️ Emergency Manual Reporting")
     st.write("Use your device microphone/dictation. English, Hindi, and Hinglish are supported.")
