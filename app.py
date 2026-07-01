@@ -477,6 +477,7 @@ with tab1:
             "Use Belt Surface Damage only when belt rubber is visible. If coal/rocks cover the belt, use Spillage / Foreign Object mode."
         )
         st.caption("In Belt Surface Damage mode, all three conveyor models are evaluated together for cross-checking.")
+        st.caption("Belt detections are spatially filtered to the likely conveyor belt zone to reduce side-wall, pole, and lighting false positives.")
 
     st.caption(
         "False detections are reduced by running only the correct specialist model and filtering unwanted classes."
