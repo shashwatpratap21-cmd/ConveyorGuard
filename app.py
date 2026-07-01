@@ -222,6 +222,20 @@ def class_is_allowed(class_name, allowed_keywords=None, blocked_keywords=None):
         return any(word in name for word in allowed_keywords)
 
     return True
+    
+def is_inside_roi(x1, y1, x2, y2, img_w, img_h, roi):
+    if roi is None:
+        return True
+
+    cx = (x1 + x2) / 2
+    cy = (y1 + y2) / 2
+
+    rx1 = roi["x_min"] * img_w
+    rx2 = roi["x_max"] * img_w
+    ry1 = roi["y_min"] * img_h
+    ry2 = roi["y_max"] * img_h
+
+    return rx1 <= cx <= rx2 and ry1 <= cy <= ry2
 
 
 def draw_label(img, text, x1, y1, color):
