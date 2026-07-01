@@ -474,8 +474,6 @@ with tab1:
         st.info(f"🔒 System running at recommended threshold ({default_conf:.2f}).")
         confidence_threshold = default_conf
 
-    st.markdown("---")
-
     uploaded_file = st.file_uploader(
         "Drag and drop or click to upload", type=["jpg", "png", "jpeg"]
     )
