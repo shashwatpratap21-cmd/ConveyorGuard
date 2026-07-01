@@ -309,6 +309,11 @@ def run_filtered_model(
 
         x1, y1, x2, y2 = box.xyxy[0].cpu().numpy().astype(int).tolist()
 
+        img_h, img_w = image_array.shape[:2]
+
+        if not is_inside_roi(x1, y1, x2, y2, img_w, img_h, roi):
+            continue
+
         if masks_xy is not None and i < len(masks_xy):
             pts = masks_xy[i].astype(np.int32)
             cv2.fillPoly(overlay, [pts], color)
